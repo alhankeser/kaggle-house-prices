@@ -26,4 +26,4 @@ def save_predictions(test_df, predictions, target_feature, normalize_target):
     test_df[target_feature] = predictions
     if normalize_target:
         test_df[target_feature] = test_df[target_feature].apply(lambda x: np.expm1(x))
-    test_df[[test_df.columns[0], target_feature]].to_csv('submit-'+ now + '.csv', index=False)
+    test_df[[test_df.columns[0], target_feature]].to_csv('output/submit-'+ now + '.csv', index=False)
