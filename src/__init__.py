@@ -20,27 +20,59 @@ DATA['QUAL_FEATURES'] = explore.get_qual_features(DATA['TRAIN'])
 DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'])
 DATA['IGNORE_FEATURES'] = ['Id']
 
-
-CONFIG = [
+CONFIGS = pd.DataFrame([
     # WORK IN PROGRESS...
     {
-        'combine': [['GrLivArea', 'TotalBsmtSF']],
+        'combine': [],
         'drop': [],
         'options': {
-            'normalize_target': True
+            'normalize_target': False,
+            'scale_encoded_qual_features': False
+        }
+    },
+    {
+        'combine': [],
+        'drop': [],
+        'options': {
+            'normalize_target': True,
+            'scale_encoded_qual_features': False
+        }
+    },
+    {
+        'combine': [],
+        'drop': [],
+        'options': {
+            'normalize_target': True,
+            'scale_encoded_qual_features': True
+        }
+    },
+    {
+        'combine': [],
+        'drop': {
+            'corr': 0.2
+        },
+        'options': {
+            'normalize_target': True,
+            'scale_encoded_qual_features': True
         }
     }
-]
 
-# CLEAN:
-qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
+])
 
-# ENGINEER:
-train_clean, test_clean = engineer.combine_features([train_clean, test_clean], [['GrLivArea', 'TotalBsmtSF']])
+def score_configs(DATA, CONFIGS, times):
+    scores_df = pd.DataFrame(columns=['configs', 'score', 'predictions', 'correlations', 'disparity'])
+    while times > 0:
+        for index, config in CONFIGS.iterrows():
+            qual_features_encoded, train_clean, test_clean = clean.run(DATA, config)
+            correlations, disparity = explore.run(train_clean, qual_features_encoded, DATA['TARGET_FEATURE'])
+            predictions, score = model.fit_score_predict(train_clean, test_clean, DATA['TARGET_FEATURE'])
+            scores_df = scores_df.append({'configs': index, 'score': score, 'predictions': predictions, 'correlations': correlations, 'disparity': disparity}, ignore_index=True)
+        times -= 1
+    return scores_df
 
-# EXPLORE:
-correlations, disparity, effect_size = explore.run(train_clean, qual_features_encoded, DATA['TARGET_FEATURE'])
+scores_df = score_configs(DATA, CONFIGS, 3)
 
-print(correlations.head(5))
-print(disparity.head(5))
-print(effect_size.head(10))
+print(scores_df[['configs','score']].groupby('configs').mean())
+
+# print(scores_df.iloc[1]['correlations'])
+# print(scores_df.iloc[2]['correlations'])

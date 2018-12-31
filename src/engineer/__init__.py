@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def combine_features(dfs, feature_sets):
-    modified_dfs = []
+    result = []
     for df in dfs:
         for feature_set in feature_sets:
             if len(feature_set) > 2:
@@ -11,8 +11,8 @@ def combine_features(dfs, feature_sets):
             combined_name = '_'.join(feature_set[:])
             df[combined_name] = df[feature_set[0]] + df[feature_set[1]]
         df = df.drop(columns=feature_set)
-        modified_dfs.append(df)
-    return modified_dfs
+        result.append(df)
+    return result
 
 
 def make_binary(dfs, target_feature):

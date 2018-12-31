@@ -1,68 +1,74 @@
 import numpy as np
 import pandas as pd
+import importlib
 
 
 def run(DATA, CONFIG):
     train_clean = DATA['TRAIN'].copy()
     test_clean = DATA['TEST'].copy()
-    
+    normalize_target = CONFIG['options']['normalize_target']
+    scale_encoded_qual_features = CONFIG['options']['scale_encoded_qual_features']
+    target_feature = DATA['TARGET_FEATURE']
+
+
     # Train
-    train_clean = transform_to_log(train_clean, DATA['TARGET_FEATURE'])
-    train_clean, qual_features_encoded = encode_qual_features_train(train_clean, DATA['QUAL_FEATURES'], DATA['TARGET_FEATURE'])
+    if normalize_target:
+        train_clean[target_feature] = np.log1p(train_clean[target_feature])
     
-    # Test
-    test_clean = encode_qual_features_test(test_clean, qual_features_encoded)
+    # Create qual features encoding lookup table
+    qual_features_encoded = create_encoding_lookup(train_clean.fillna(0), DATA['QUAL_FEATURES'], DATA['TARGET_FEATURE'])
     
+    if scale_encoded_qual_features:
+        qual_features_encoded = scale_qual_feature_encoding(qual_features_encoded, DATA['TARGET_FEATURE'])
+
     # Both
     dfs = [train_clean, test_clean]
-    result = [qual_features_encoded['encoded_name'].unique()]
+    result = [qual_features_encoded]
     for df in dfs:
+        df = df.fillna(0)
+        df = encode_qual_features(df, qual_features_encoded)
         df = df.fillna(0)
         df = df.drop(columns=DATA['IGNORE_FEATURES'])
         result.append(df)
     return result
 
 
-def fillna(df, fill_with=0):
-    return df.fillna(fill_with)
-
-
-def transform_to_log(df, target_feature):
-    df[target_feature] = np.log1p(df[target_feature])
-    return df
-
-
-def untransform_from_log(df, target_feature):
-    df[target_feature] = df[target_feature].apply(lambda x: np.expm1(x))
-    return df
-
-
-def encode_qual_features_train(df, qual_features, target_feature, suffix='_E'):
-    qual_features_encoded = pd.DataFrame(columns=['feature_name','encoded_name','value','order'])
-    encoded_df = df.copy()
+def create_encoding_lookup(df, qual_features, target_feature, suffix='_E'):
+    result = pd.DataFrame([])
     for qual_feature in qual_features:
-        qual_feature_encoded_name = qual_feature + suffix
         order_df = pd.DataFrame()
-        order_df['value'] = df[qual_feature].unique() 
-        order_df.index = order_df.value
+        order_df['val'] = df[qual_feature].unique()
+        order_df.index = order_df.val
+        order_df.drop(columns=['val'], inplace=True)
         order_df[target_feature + '_median'] = df[[qual_feature, target_feature]].groupby(qual_feature)[[target_feature]].median()
+        qual_feature_encoded_name = qual_feature + suffix
+        order_df['feature'] = qual_feature
+        order_df['encoded_name'] = qual_feature_encoded_name
         order_df = order_df.sort_values(target_feature + '_median')
-        order_df['order'] = range(1, len(order_df)+1)
-        order_df = order_df['order'].to_dict()
-        for qual_val, order in order_df.items():
-            encoded_df.loc[encoded_df[qual_feature] == qual_val, qual_feature_encoded_name] = order
-            qual_features_encoded = qual_features_encoded.append({'feature_name': qual_feature, 'encoded_name': qual_feature_encoded_name, 'value': qual_val, 'order': order}, ignore_index=True)
-    encoded_df = encoded_df.drop(columns=qual_features)
-    return (encoded_df, qual_features_encoded)
+        order_df['num_val'] = range(1, len(order_df)+1)
+        result = result.append(order_df)
+    result.reset_index(inplace=True)
+    return result
 
 
-def encode_qual_features_test(df, qual_features_encoded):
-    encoded_df = df.copy()
+def encode_qual_features(df, qual_features_encoded):
+    result = df.copy()
     for encoded_index, encoded_row in qual_features_encoded.iterrows():
-        feature = encoded_row['feature_name']
+        feature = encoded_row['feature']
         encoded_name = encoded_row['encoded_name']
-        value = encoded_row['value']
-        order = encoded_row['order'] 
-        encoded_df.loc[encoded_df[feature] == value, encoded_name] = order
-    encoded_df = encoded_df.drop(columns=qual_features_encoded['feature_name'].unique())
-    return encoded_df
+        value = encoded_row['val']
+        encoded_value = encoded_row['num_val'] 
+        result.loc[result[feature] == value, encoded_name] = encoded_value
+    result = result.drop(columns=qual_features_encoded['feature'].unique())
+    return result
+
+def scale_qual_feature_encoding(qual_features_encoded, target_feature):
+    result = qual_features_encoded.copy()
+    for feature in result['feature'].unique():
+        values = result[result['feature'] == feature]['num_val'].values
+        medians = result[result['feature'] == feature][target_feature + '_median'].values
+        for median in medians:
+            # scaled_value_max = len(values) * (median / medians.max())
+            scaled_value_min = ((values.min() + 1) * (median / medians.min()))-1
+            result.loc[(result['feature'] == feature) & (result[target_feature + '_median'] == median), 'num_val'] = scaled_value_min
+    return result

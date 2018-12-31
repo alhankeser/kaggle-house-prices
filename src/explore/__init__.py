@@ -3,11 +3,11 @@ import pandas as pd
 from scipy import stats
 
 def run(train_clean, qual_features_encoded, target_feature):
+    qual_features_list = qual_features_encoded['encoded_name'].unique()
     correlations = get_correlations(train_clean, target_feature)
-    disparity = get_qual_feature_disparity(train_clean, qual_features_encoded, target_feature)
-    effect_size = compare_qual_feature_value_effect(train_clean, qual_features_encoded, target_feature)
-    # make_binary = engineer.make_binary([train_clean, test_clean], disparity)
-    return (correlations, disparity, effect_size)
+    disparity = get_qual_feature_disparity(train_clean, qual_features_list, target_feature)
+    # effect_size = compare_qual_feature_value_effect(train_clean, qual_features_list, target_feature)
+    return (correlations, disparity)
 
 def get_quant_features(df):
     features = [f for f in df.columns if df.dtypes[f] != 'object']
@@ -20,17 +20,17 @@ def get_qual_features(df):
 
 
 def get_correlations(df, target_feature, method='spearman'):
-    correlation_matrix = df.corr(method='spearman')
+    correlation_matrix = df.corr(method=method)
     correlation_matrix = correlation_matrix.sort_values(target_feature)
     correlation_matrix = correlation_matrix.drop(target_feature)
     return correlation_matrix[[target_feature]]
 
 
-def get_qual_feature_disparity(df, qual_features, target_feature):
+def get_qual_feature_disparity(df, qual_features_list, target_feature):
     anova_df = pd.DataFrame()
-    anova_df['feature'] = qual_features
+    anova_df['feature'] = qual_features_list
     p_values = []
-    for col in qual_features:
+    for col in qual_features_list:
         samples = []
         for unique_val in df[col].unique():
             sample = df[df[col] == unique_val][target_feature].values
@@ -39,12 +39,13 @@ def get_qual_feature_disparity(df, qual_features, target_feature):
         p_values.append(p_value)
     anova_df['p_value'] = p_values
     anova_df['disparity'] = np.log(1./anova_df['p_value'].values)
+    # sort
     return anova_df.sort_values('disparity')
 
-def compare_qual_feature_value_effect(df, qual_features, target_feature):
+def compare_qual_feature_value_effect(df, qual_features_list, target_feature):
     target_median = target_feature + '_median'
     result = pd.DataFrame(columns=['feature', 'value', target_median])
-    for col in qual_features:
+    for col in qual_features_list:
         for unique_val in df[col].unique():
             result = result.append({
                 'feature': col,
