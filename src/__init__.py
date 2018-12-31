@@ -1,34 +1,46 @@
-# External imports:
-import numpy as np
+# External libraries
 import pandas as pd
+import importlib
 
-# Local imports:
-import explore
-import clean
-import engineer
-import model
 
-#
-# DATA:
-#
-base_path = '/'.join(__file__.split('/')[:-1])
-train_df = pd.read_csv(base_path + '/data/train.csv')
-test_df = pd.read_csv(base_path + '/data/test.csv')
-target_var = 'SalePrice'
-ignore = ['Id', 'SalePrice']
+# Local modules
+explore = importlib.import_module('explore')
+clean = importlib.import_module('clean')
+engineer = importlib.import_module('engineer')
+model = importlib.import_module('model')
 
-#
+
+# DATA
+DATA = {}
+DATA['BASE_PATH'] = '/'.join(__file__.split('/')[:-1])+'/'
+DATA['TRAIN'] = pd.read_csv(DATA['BASE_PATH'] + 'data/train.csv')
+DATA['TEST'] = pd.read_csv(DATA['BASE_PATH'] + 'data/test.csv')
+DATA['TARGET_FEATURE'] = 'SalePrice'
+DATA['QUAL_FEATURES'] = explore.get_qual_features(DATA['TRAIN'])
+DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'])
+DATA['IGNORE_FEATURES'] = ['Id']
+
+
+CONFIG = [
+    # WORK IN PROGRESS...
+    {
+        'combine': [['GrLivArea', 'TotalBsmtSF']],
+        'drop': [],
+        'options': {
+            'normalize_target': True
+        }
+    }
+]
+
 # CLEAN:
-#
-train_clean = train_df.copy()
-test_clean = test_df.copy()
-dfs = [train_clean, test_clean]
+qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
 
-train_clean = clean.transform_to_log(train_clean,target_var)
+# ENGINEER:
+train_clean, test_clean = engineer.combine_features([train_clean, test_clean], [['GrLivArea', 'TotalBsmtSF']])
 
-
-#
 # EXPLORE:
-#
-explore.correlate(train_clean, target_var)
-# explore.disparity(train_clean, target_var)
+correlations, disparity, effect_size = explore.run(train_clean, qual_features_encoded, DATA['TARGET_FEATURE'])
+
+print(correlations.head(5))
+print(disparity.head(5))
+print(effect_size.head(10))
