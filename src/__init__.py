@@ -123,15 +123,26 @@ CONFIGS = pd.DataFrame([
     #         'scale_threshold': 20
     #     }
     # },
-     { # 0.14438
+     { # 0.14438 (LB: 0.12951)
         'combine': [],
         'drop': [],
         'options': {
-            'drop_corr': 0.1, #
+            'drop_corr': 0.1,
             'normalize_target': True,
             'normalize_after_encode': True,
             'scale_encoded_qual_features': False,
             'scale_threshold': 10
+        }
+    },
+      { 
+        'combine': [],
+        'drop': ['MoSold', 'YrSold'],
+        'options': {
+            'drop_corr': 0,
+            'normalize_target': True,
+            'normalize_after_encode': True,
+            'scale_encoded_qual_features': False,
+            'scale_threshold': 0
         }
     },
     # { # 0.150094
@@ -174,10 +185,11 @@ def score_configs(DATA, CONFIGS, times):
         times -= 1
     # qual_std = qual_features_encoded.groupby('encoded_name')['num_val'].std().sort_values()
     # print(qual_std)
-    print(train_clean.head())
+    print(disparity)
+    # print(train_clean.head())
     return scores_df
 
-scores_df = score_configs(DATA, CONFIGS, 10)
+scores_df = score_configs(DATA, CONFIGS, 3)
 
 save_config = 0
 model.save_predictions(DATA['TEST'], scores_df.iloc[save_config]['predictions'], DATA['TARGET_FEATURE'], CONFIGS.iloc[save_config]['options']['normalize_target'])
