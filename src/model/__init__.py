@@ -7,11 +7,11 @@ import math
 import time
 
 
-def fit_score_predict(train, test, target_feature, normalize_target=False):
+def fit_score_predict(train, test, target_feature, normalize_target=False, random_state=0):
     X = train.drop(columns=[target_feature])
     y = train[target_feature]
     # Basic Scoring
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=random_state)
     model = LinearRegression()
     model.fit(X_train, y_train)
     X_predictions = model.predict(X_test)
