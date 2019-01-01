@@ -20,18 +20,10 @@ DATA['QUAL_FEATURES'] = explore.get_qual_features(DATA['TRAIN'])
 DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'])
 DATA['IGNORE_FEATURES'] = ['Id']
 
+# TODO: 
+##  count encoded quals and remove ones with low sample size / pvalue
 CONFIGS = pd.DataFrame([
-    # WORK IN PROGRESS...
-    # {
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': False,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    # {
+    # { # 0.154847
     #     'combine': [],
     #     'drop': [],
     #     'options': {
@@ -40,62 +32,158 @@ CONFIGS = pd.DataFrame([
     #         'scale_encoded_qual_features': False
     #     }
     # },
-    # {
+    # {  # 0.157314
+    #     'combine': [['TotalBsmtSF','GrLivArea']],
+    #     'drop': ['BsmtFinSF1', 'BsmtFinSF2', '1stFlrSF', '2ndFlrSF', 'LowQualFinSF'],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'scale_encoded_qual_features': False
+    #     }
+    # },
+    # {  # 0.154901
+    #     'combine': [['TotalBsmtSF','GrLivArea']],
+    #     'drop': ['MoSold', 'YrSold'],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'scale_encoded_qual_features': False
+    #     }
+    # },
+    # {  # 0.155069
+    #     'combine': [],
+    #     'drop': ['MoSold', 'YrSold', 'BsmtFinSF1', 'BsmtFinSF2', '1stFlrSF', '2ndFlrSF', 'LowQualFinSF'],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'scale_encoded_qual_features': False
+    #     }
+    # },
+    # {  # 0.157415
+    #     'combine': [['TotalBsmtSF','GrLivArea']],
+    #     'drop': ['MoSold', 'YrSold', 'BsmtFinSF1', 'BsmtFinSF2', '1stFlrSF', '2ndFlrSF', 'LowQualFinSF'],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'scale_encoded_qual_features': False
+    #     }
+    # },
+    # { 
     #     'combine': [],
     #     'drop': [],
     #     'options': {
     #         'drop_corr': 0,
     #         'normalize_target': True,
-    #         'scale_encoded_qual_features': True
+    #         'normalize_after_encode': False,
+    #         'scale_encoded_qual_features': True,
+    #         'scale_threshold': -1
     #     }
     # },
-    {
+    # { 
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'normalize_after_encode': True,
+    #         'scale_encoded_qual_features': True,
+    #         'scale_threshold': -1
+    #     }
+    # },
+    # { # 0.153464
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'normalize_after_encode': True,
+    #         'scale_encoded_qual_features': True,
+    #         'scale_threshold': 10
+    #     }
+    # },
+    # { # 0.15163
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'normalize_after_encode': True,
+    #         'scale_encoded_qual_features': True,
+    #         'scale_threshold': 10
+    #     }
+    # },
+    # { # 0.151401
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'normalize_after_encode': True,
+    #         'scale_encoded_qual_features': True,
+    #         'scale_threshold': 20
+    #     }
+    # },
+     { # 0.14438
         'combine': [],
         'drop': [],
         'options': {
-            'drop_corr': 0.1,
+            'drop_corr': 0.1, #
             'normalize_target': True,
-            'scale_encoded_qual_features': True
+            'normalize_after_encode': True,
+            'scale_encoded_qual_features': False,
+            'scale_threshold': 10
         }
     },
-    # {
+    # { # 0.150094
     #     'combine': [],
     #     'drop': [],
     #     'options': {
-    #         'drop_corr': 0.6,
+    #         'drop_corr': 0.1,
     #         'normalize_target': True,
-    #         'scale_encoded_qual_features': True
+    #         'normalize_after_encode': True,
+    #         'scale_encoded_qual_features': True,
+    #         'scale_threshold': 10
+    #     }
+    # },
+    # { #0.149946
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_after_encode': True,
+    #         'scale_encoded_qual_features': True,
+    #         'scale_threshold': 15
     #     }
     # }
-
 ])
 
 def score_configs(DATA, CONFIGS, times):
     scores_df = pd.DataFrame(columns=['configs', 'score', 'predictions', 'correlations', 'disparity'])
+    total_runs = len(CONFIGS)*times
     while times > 0:
-        for index, config in CONFIGS.iterrows():
-            qual_features_encoded, train_clean, test_clean = clean.run(DATA, config)
+        for index, CONFIG in CONFIGS.iterrows():
+            qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
             correlations, disparity = explore.run(train_clean, qual_features_encoded, DATA['TARGET_FEATURE'])
-            if config['options']['drop_corr'] > 0:
-                train_clean, test_clean = engineer.drop_features(train_clean, test_clean, DATA['TARGET_FEATURE'], correlations, config['options']['drop_corr'])
-            predictions, score = model.fit_score_predict(train_clean, test_clean, DATA['TARGET_FEATURE'])
+            if CONFIG['options']['drop_corr'] > 0 or len(CONFIG['drop']) > 0:
+                train_clean, test_clean = engineer.drop_features(train_clean, test_clean, DATA['TARGET_FEATURE'], CONFIG['drop'], correlations=correlations, threshold=CONFIG['options']['drop_corr'])
+            if len(CONFIG['combine']) > 0:
+                train_clean, test_clean = engineer.combine_features(train_clean, test_clean, CONFIG['combine'])
+            predictions, score = model.fit_score_predict(train_clean, test_clean, DATA['TARGET_FEATURE'], random_state=int(times ** 2))
             scores_df = scores_df.append({'configs': index, 'score': score, 'predictions': predictions, 'correlations': correlations, 'disparity': disparity}, ignore_index=True)
         times -= 1
+    # qual_std = qual_features_encoded.groupby('encoded_name')['num_val'].std().sort_values()
+    # print(qual_std)
+    print(train_clean.head())
     return scores_df
 
-scores_df = score_configs(DATA, CONFIGS, 1)
+scores_df = score_configs(DATA, CONFIGS, 10)
 
 save_config = 0
 model.save_predictions(DATA['TEST'], scores_df.iloc[save_config]['predictions'], DATA['TARGET_FEATURE'], CONFIGS.iloc[save_config]['options']['normalize_target'])
 
-# print(scores_df[['configs','score']].groupby('configs').mean())
-
-print(scores_df.iloc[save_config]['predictions'])
-
-# print(scores_df.iloc[1]['correlations'])
-# correlations = pd.DataFrame(scores_df.iloc[1]['correlations'])
-
-# target_feature = 'SalePrice'
-# threshold = 0.2
-# print(correlations[(correlations[target_feature] <= threshold) & (correlations[target_feature] >= (threshold * -1))].index)
-# print(correlations[(correlations[target_feature] <= threshold) & (correlations[target_feature] >= threshold*-1)].index)
+print('######################')
+print(scores_df[['configs','score']].groupby('configs').mean())
+print('######################')
+print(scores_df[['configs','score']].sort_values('configs'))
+print('######################')
