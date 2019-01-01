@@ -123,15 +123,15 @@ CONFIGS = pd.DataFrame([
     #         'scale_threshold': 20
     #     }
     # },
-    { # 0.149690
+     { # 0.14438
         'combine': [],
         'drop': [],
         'options': {
-            'drop_corr': 0.1,
+            'drop_corr': 0.1, #
             'normalize_target': True,
             'normalize_after_encode': True,
-            'scale_encoded_qual_features': True,
-            'scale_threshold': 20
+            'scale_encoded_qual_features': False,
+            'scale_threshold': 10
         }
     },
     # { # 0.150094
