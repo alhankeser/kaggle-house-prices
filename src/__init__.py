@@ -243,8 +243,9 @@ CONFIGS = pd.DataFrame([
     #         'skew_threshold': 0.3
     #     }
     # },
-    { # 0.130226
-        'combine': [],
+     {
+        'sum': [],
+        'multiply': [['KitchenQual', 'KitchenAbvGr']],
         'drop': [],
         'options': {
             'drop_corr': 0.1,
@@ -291,15 +292,16 @@ CONFIGS = pd.DataFrame([
 
 def score_configs(DATA, CONFIGS, times):
     scores_df = pd.DataFrame(columns=['configs', 'score', 'predictions', 'correlations', 'disparity'])
-    total_runs = len(CONFIGS)*times
     while times > 0:
         for index, CONFIG in CONFIGS.iterrows():
             qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
+            if len(CONFIG['sum']) > 0:
+                train_clean, test_clean = engineer.sum_features(train_clean, test_clean, CONFIG['sum'])
+            if len(CONFIG['multiply']) > 0:
+                train_clean, test_clean = engineer.multiply_features(train_clean, test_clean, CONFIG['multiply'])
             correlations, disparity = explore.run(train_clean, qual_features_encoded, DATA['TARGET_FEATURE'])
             if CONFIG['options']['drop_corr'] > 0 or len(CONFIG['drop']) > 0:
                 train_clean, test_clean = engineer.drop_features(train_clean, test_clean, DATA['TARGET_FEATURE'], CONFIG['drop'], correlations=correlations, threshold=CONFIG['options']['drop_corr'])
-            if len(CONFIG['combine']) > 0:
-                train_clean, test_clean = engineer.combine_features(train_clean, test_clean, CONFIG['combine'])
             predictions, score = model.fit_score_predict(train_clean, test_clean, DATA['TARGET_FEATURE'], random_state=int(times ** 2))
             scores_df = scores_df.append({'configs': index, 'score': score, 'predictions': predictions, 'correlations': correlations, 'disparity': disparity}, ignore_index=True)
         times -= 1
