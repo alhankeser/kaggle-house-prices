@@ -60,3 +60,25 @@ def bath_porch_sf(train_clean, test_clean):
                     'OpenPorchSF', 'EnclosedPorch', 'ScreenPorch'], axis=1)
         result.append(df)
     return result
+
+def house_remodel_and_age(train_clean, test_clean):
+    dfs = [train_clean, test_clean]
+    result = []
+    for df in dfs:
+        # add flag is house has been remodeled (the year of the remodel is same as construction date 
+        # if no remodeling or additions))
+        df['is_remodeled'] = (df['YearRemodAdd'] != df['YearBuilt'])
+
+        # add feature about the age of the house when sold
+        df['age'] = df['YrSold'] - df['YearBuilt']
+
+        # add flag if house was sold 2 years or less after it was built
+        df['is_new_house'] = (df['YrSold'] - df['YearBuilt'] <= 2)
+
+        # add flag is remodel was recent (i.e. within 2 years of the sale)
+        df['is_recent_remodel'] = (df['YrSold'] - df['YearRemodAdd'] <= 2)
+        
+        # drop the original columns
+        df = df.drop(['YearRemodAdd', 'YearBuilt'], axis=1)
+        result.append(df)
+    return result

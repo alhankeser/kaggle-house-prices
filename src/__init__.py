@@ -256,7 +256,20 @@ CONFIGS = pd.DataFrame([
     #         'bath_porch_sf': False
     #     }
     # },
-     { # 0.130575
+    #  { # 0.130575
+    #     'sum': [],
+    #     'multiply': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'skew_threshold': 0.4,
+    #         'scale_encoded_qual_features': True,
+    #         'bath_porch_sf': True
+    #     }
+    # },
+     { # 0.130465 (LB: 0.12343)
         'sum': [],
         'multiply': [],
         'drop': [],
@@ -266,9 +279,24 @@ CONFIGS = pd.DataFrame([
             'normalize_quant_features': True,
             'skew_threshold': 0.4,
             'scale_encoded_qual_features': True,
-            'bath_porch_sf': True
+            'bath_porch_sf': True,
+            'house_remodel_and_age': True
         }
     },
+    # { # 0.130214
+    #     'sum': [],
+    #     'multiply': [['GarageQual_E','GarageCond_E']],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'skew_threshold': 0.4,
+    #         'scale_encoded_qual_features': True,
+    #         'bath_porch_sf': True,
+    #         'house_remodel_and_age': True
+    #     }
+    # },
     # { # 0.130343 (LB: 0.12375)
     #     'sum': [],
     #     'multiply': [['GarageQual_E','GarageCond_E']],
@@ -304,6 +332,8 @@ def score_configs(DATA, CONFIGS, times):
             qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
             if CONFIG['options']['bath_porch_sf']:
                 train_clean, test_clean = engineer.bath_porch_sf(train_clean, test_clean)
+            if CONFIG['options']['house_remodel_and_age']:
+                train_clean, test_clean = engineer.house_remodel_and_age(train_clean, test_clean)
             if len(CONFIG['sum']) > 0:
                 train_clean, test_clean = engineer.sum_features(train_clean, test_clean, CONFIG['sum'])
             if len(CONFIG['multiply']) > 0:
@@ -320,7 +350,7 @@ def score_configs(DATA, CONFIGS, times):
     # print(train_clean.head())
     return scores_df
 
-scores_df = score_configs(DATA, CONFIGS, 1)
+scores_df = score_configs(DATA, CONFIGS, 10)
 
 save_config = 0
 model.save_predictions(DATA['TEST'], scores_df.iloc[save_config]['predictions'], DATA['TARGET_FEATURE'], CONFIGS.iloc[save_config]['options']['normalize_target'])
