@@ -9,8 +9,11 @@ def run(train_clean, qual_features_encoded, target_feature):
     # effect_size = compare_qual_feature_value_effect(train_clean, qual_features_list, target_feature)
     return (correlations, disparity)
 
-def get_quant_features(df):
+def get_quant_features(df, target_feature, ignore_features):
+    ignore_features = ignore_features.copy()
     features = [f for f in df.columns if df.dtypes[f] != 'object']
+    ignore_features.append(target_feature)
+    features = list(set(features) - set(ignore_features))
     return features
 
 
