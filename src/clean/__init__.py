@@ -75,7 +75,8 @@ def encode_qual_features(df, qual_features_encoded):
         encoded_name = encoded_row['encoded_name']
         value = encoded_row['val']
         encoded_value = encoded_row['num_val'] 
-        result[result[feature] == value] = encoded_value
+        result.loc[result[feature] == value, encoded_name] = encoded_value
+    result = result.drop(columns=qual_features_encoded['feature'].unique())
     return result
 
 def scale_qual_feature_encoding(qual_features_encoded, target_feature):
