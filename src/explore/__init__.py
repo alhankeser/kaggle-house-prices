@@ -3,9 +3,9 @@ import pandas as pd
 from scipy import stats
 
 def run(train_clean, qual_features_encoded, target_feature):
-    qual_features_list = qual_features_encoded['encoded_name'].unique()
+    qual_features_list = qual_features_encoded['feature'].unique()
     correlations = get_correlations(train_clean, target_feature)
-    disparity = get_qual_feature_disparity(train_clean, qual_features_list, target_feature)
+    disparity = False # get_qual_feature_disparity(train_clean, qual_features_list, target_feature)
     # effect_size = compare_qual_feature_value_effect(train_clean, qual_features_list, target_feature)
     return (correlations, disparity)
 

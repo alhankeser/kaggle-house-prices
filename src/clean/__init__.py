@@ -17,16 +17,12 @@ def run(DATA, CONFIG):
 
     # Create qual features encoding lookup table
     qual_features_encoded = create_encoding_lookup(train_clean.fillna(0), DATA['QUAL_FEATURES'], DATA['TARGET_FEATURE'])
-    
     # Get skewed features based on training data
     skewed_features = get_skewed_features(train_clean, quant_features, skew_threshold)
-
     if scale_encoded_qual_features:
         qual_features_encoded = scale_qual_feature_encoding(qual_features_encoded, DATA['TARGET_FEATURE'])
-
     if normalize_target:
         train_clean[target_feature] = np.log1p(train_clean[target_feature])
-
     # Both
     dfs = [train_clean, test_clean]
     result = [qual_features_encoded]
@@ -79,8 +75,7 @@ def encode_qual_features(df, qual_features_encoded):
         encoded_name = encoded_row['encoded_name']
         value = encoded_row['val']
         encoded_value = encoded_row['num_val'] 
-        result.loc[result[feature] == value, encoded_name] = encoded_value
-    result = result.drop(columns=qual_features_encoded['feature'].unique())
+        result[result[feature] == value] = encoded_value
     return result
 
 def scale_qual_feature_encoding(qual_features_encoded, target_feature):
