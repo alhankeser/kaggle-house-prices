@@ -1,6 +1,8 @@
 # External libraries
 import pandas as pd
 import importlib
+import warnings
+warnings.filterwarnings(action="ignore")
 
 
 # Local modules
@@ -16,9 +18,10 @@ DATA['BASE_PATH'] = '/'.join(__file__.split('/')[:-1])+'/'
 DATA['TRAIN'] = pd.read_csv(DATA['BASE_PATH'] + 'data/train.csv')
 DATA['TEST'] = pd.read_csv(DATA['BASE_PATH'] + 'data/test.csv')
 DATA['TARGET_FEATURE'] = 'SalePrice'
-DATA['QUAL_FEATURES'] = explore.get_qual_features(DATA['TRAIN'])
-DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'])
 DATA['IGNORE_FEATURES'] = ['Id']
+DATA['QUAL_FEATURES'] = explore.get_qual_features(DATA['TRAIN'])
+DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'],DATA['TARGET_FEATURE'], DATA['IGNORE_FEATURES'])
+
 
 # TODO: 
 ##  count encoded quals and remove ones with low sample size / pvalue
@@ -123,29 +126,37 @@ CONFIGS = pd.DataFrame([
     #         'scale_threshold': 20
     #     }
     # },
-     { # 0.14438 (LB: 0.12951)
-        'combine': [],
-        'drop': [],
-        'options': {
-            'drop_corr': 0.1,
-            'normalize_target': True,
-            'normalize_after_encode': True,
-            'scale_encoded_qual_features': False,
-            'scale_threshold': 10
-        }
-    },
-      { 
-        'combine': [],
-        'drop': ['MoSold', 'YrSold'],
-        'options': {
-            'drop_corr': 0,
-            'normalize_target': True,
-            'normalize_after_encode': True,
-            'scale_encoded_qual_features': False,
-            'scale_threshold': 0
-        }
-    },
-    # { # 0.150094
+    #  { # 0.14438 (LB: 0.12951)
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': False,
+    #         'scale_encoded_qual_features': False
+    #     }
+    # },
+    #   { # 0.132941 (LB: 0.12499)
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': False
+    #     }
+    # },
+    #   { #0.131128 (LB: 0.12411)
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.15,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True
+    #     }
+    # },
+     # { # 0.150094
     #     'combine': [],
     #     'drop': [],
     #     'options': {
@@ -167,6 +178,115 @@ CONFIGS = pd.DataFrame([
     #         'scale_threshold': 15
     #     }
     # }
+    #   { # 0.131195
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True
+    #     }
+    # },
+    # { # on skew > 0.75 boxcox 0.130584 / log: 0.130318
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0.75
+    #     }
+    # }
+    # { 
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0
+    #     }
+    # },
+    # { 
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0.1
+    #     }
+    # },
+    # { 
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0.2
+    #     }
+    # },
+    # { 
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0.3
+    #     }
+    # },
+    { # 0.130226
+        'combine': [],
+        'drop': [],
+        'options': {
+            'drop_corr': 0.1,
+            'normalize_target': True,
+            'normalize_quant_features': True,
+            'skew_threshold': 0.4,
+            'scale_encoded_qual_features': True
+        }
+    },
+    #  { 
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0.5
+    #     }
+    # },
+    #  { 
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0.6
+    #     }
+    # },
+    #    { # 0.130120
+    #     'combine': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'scale_encoded_qual_features': True,
+    #         'skew_threshold': 0.7
+    #     }
+    # }
 ])
 
 def score_configs(DATA, CONFIGS, times):
@@ -185,11 +305,11 @@ def score_configs(DATA, CONFIGS, times):
         times -= 1
     # qual_std = qual_features_encoded.groupby('encoded_name')['num_val'].std().sort_values()
     # print(qual_std)
-    print(disparity)
+    # print(disparity)
     # print(train_clean.head())
     return scores_df
 
-scores_df = score_configs(DATA, CONFIGS, 3)
+scores_df = score_configs(DATA, CONFIGS, 1)
 
 save_config = 0
 model.save_predictions(DATA['TEST'], scores_df.iloc[save_config]['predictions'], DATA['TARGET_FEATURE'], CONFIGS.iloc[save_config]['options']['normalize_target'])
