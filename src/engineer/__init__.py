@@ -42,3 +42,21 @@ def multiply_features(clean_train, clean_test, feature_sets):
 
 def make_binary(dfs, target_feature):
     return True
+
+def bath_porch_sf(train_clean, test_clean):
+    dfs = [train_clean, test_clean]
+    result = []
+    for df in dfs:
+        # total SF for bathroom
+        df['TotalBath'] = df['BsmtFullBath'] + (0.5 * df['BsmtHalfBath']) + \
+        df['FullBath'] + (0.5 * df['HalfBath'])
+
+        # Total SF for porch
+        df['AllPorchSF'] = df['OpenPorchSF'] + df['EnclosedPorch'] + \
+        df['3SsnPorch'] + df['ScreenPorch']
+        
+        # drop the original columns
+        df = df.drop(['BsmtFullBath', 'FullBath', 'HalfBath', 
+                    'OpenPorchSF', 'EnclosedPorch', 'ScreenPorch'], axis=1)
+        result.append(df)
+    return result

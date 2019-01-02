@@ -243,49 +243,56 @@ CONFIGS = pd.DataFrame([
     #         'skew_threshold': 0.3
     #     }
     # },
-     {
+    #  { # 0.130226
+    #     'sum': [],
+    #     'multiply': [],
+    #     'drop': [],
+    #     'options': {
+    #         'drop_corr': 0.1,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': True,
+    #         'skew_threshold': 0.4,
+    #         'scale_encoded_qual_features': True,
+    #         'bath_porch_sf': False
+    #     }
+    # },
+     { # 0.130575
         'sum': [],
-        'multiply': [['KitchenQual', 'KitchenAbvGr']],
+        'multiply': [],
         'drop': [],
         'options': {
             'drop_corr': 0.1,
             'normalize_target': True,
             'normalize_quant_features': True,
             'skew_threshold': 0.4,
-            'scale_encoded_qual_features': True
+            'scale_encoded_qual_features': True,
+            'bath_porch_sf': True
         }
     },
-    #  { 
-    #     'combine': [],
+    # { # 0.130343 (LB: 0.12375)
+    #     'sum': [],
+    #     'multiply': [['GarageQual_E','GarageCond_E']],
     #     'drop': [],
     #     'options': {
     #         'drop_corr': 0.1,
     #         'normalize_target': True,
     #         'normalize_quant_features': True,
+    #         'skew_threshold': 0.4,
     #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0.5
+    #         'bath_porch_sf': True
     #     }
     # },
-    #  { 
-    #     'combine': [],
+    # { # 0.129931 (LB: 0.12812)
+    #     'sum': [],
+    #     'multiply': [['GarageQual_E','GarageCond_E']],
     #     'drop': [],
     #     'options': {
     #         'drop_corr': 0.1,
     #         'normalize_target': True,
     #         'normalize_quant_features': True,
+    #         'skew_threshold': 0.4,
     #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0.6
-    #     }
-    # },
-    #    { # 0.130120
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0.7
+    #         'bath_porch_sf': True
     #     }
     # }
 ])
@@ -295,6 +302,8 @@ def score_configs(DATA, CONFIGS, times):
     while times > 0:
         for index, CONFIG in CONFIGS.iterrows():
             qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
+            if CONFIG['options']['bath_porch_sf']:
+                train_clean, test_clean = engineer.bath_porch_sf(train_clean, test_clean)
             if len(CONFIG['sum']) > 0:
                 train_clean, test_clean = engineer.sum_features(train_clean, test_clean, CONFIG['sum'])
             if len(CONFIG['multiply']) > 0:
