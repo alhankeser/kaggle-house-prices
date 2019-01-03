@@ -26,7 +26,7 @@ DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'],DATA['TARGET_F
 # TODO: 
 ##  count encoded quals and remove ones with low sample size / pvalue
 CONFIGS = pd.DataFrame([
-     { # 0.120931
+     { # 0.121053 (LB: 0.12147)
         'sum': [],
         'multiply': [],
         'drop': ['BedroomAbvGr'],
@@ -37,6 +37,7 @@ CONFIGS = pd.DataFrame([
             'normalize_quant_features': True,
             'skew_threshold': 0.4,
             'scale_encoded_qual_features': True,
+            'scale_quant_features': True,
             'bath_porch_sf': True,
             'house_remodel_and_age': True
         }
@@ -78,6 +79,8 @@ def score_configs(DATA, CONFIGS, times):
                 qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
             else:
                 qual_features_encoded, train_clean, test_clean = (default_qual_features_encoded.copy(), default_train_clean.copy(), default_test_clean.copy())
+            if CONFIG['options']['scale_quant_features']:
+                train_clean, test_clean = engineer.scale_quant_features(train_clean, test_clean, DATA['QUANT_FEATURES'])
             if CONFIG['options']['bath_porch_sf']:
                 train_clean, test_clean = engineer.bath_porch_sf(train_clean, test_clean)
             if CONFIG['options']['house_remodel_and_age']:

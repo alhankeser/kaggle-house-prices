@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import operator
 import functools
+from sklearn.preprocessing import StandardScaler
 
 def drop_features(clean_train, clean_test, target_feature, drop, correlations=False, threshold=False):
     dfs = [clean_train, clean_test]
@@ -83,3 +84,14 @@ def house_remodel_and_age(train_clean, test_clean):
         result.append(df)
     return result
 
+def scale_quant_features(train_clean, test_clean, quant_features):
+    print(train_clean[quant_features])
+    scaler = StandardScaler()
+    scaler.fit(train_clean[quant_features])
+    scaled = scaler.transform(train_clean[quant_features])
+    for i, col in enumerate(quant_features):
+        train_clean[col] = scaled[:,i]
+    scaled = scaler.fit_transform(test_clean[quant_features])
+    for i, col in enumerate(quant_features):
+        test_clean[col] = scaled[:,i]
+    return (train_clean, test_clean)
