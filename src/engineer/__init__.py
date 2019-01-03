@@ -85,7 +85,6 @@ def house_remodel_and_age(train_clean, test_clean):
     return result
 
 def scale_quant_features(train_clean, test_clean, quant_features):
-    print(train_clean[quant_features])
     scaler = StandardScaler()
     scaler.fit(train_clean[quant_features])
     scaled = scaler.transform(train_clean[quant_features])

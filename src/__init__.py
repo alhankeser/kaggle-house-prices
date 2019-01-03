@@ -19,17 +19,23 @@ DATA['TRAIN'] = pd.read_csv(DATA['BASE_PATH'] + 'data/train.csv')
 DATA['TEST'] = pd.read_csv(DATA['BASE_PATH'] + 'data/test.csv')
 DATA['TARGET_FEATURE'] = 'SalePrice'
 DATA['IGNORE_FEATURES'] = ['Id']
-DATA['QUAL_FEATURES'] = explore.get_qual_features(DATA['TRAIN'])
+DATA['QUAL_FEATURES'] = explore.get_qual_features(DATA['TRAIN'], DATA['TARGET_FEATURE'], DATA['IGNORE_FEATURES'])
 DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'],DATA['TARGET_FEATURE'], DATA['IGNORE_FEATURES'])
 
 
 # TODO: 
 ##  count encoded quals and remove ones with low sample size / pvalue
 CONFIGS = pd.DataFrame([
-     { # 0.121053 (LB: 0.12147)
+     { # 0.119222 (LB: 0.12128)
         'sum': [],
         'multiply': [],
-        'drop': ['BedroomAbvGr'],
+        'drop': ['BedroomAbvGr', 
+                'GarageYrBlt', 
+                'GarageArea', 
+                'FireplaceQu_E', 
+                'Alley_E',
+                'Condition2_E'
+                ],
         'options': {
             'use_default_clean': True,
             'drop_corr': 0.1,

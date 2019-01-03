@@ -17,8 +17,11 @@ def get_quant_features(df, target_feature, ignore_features):
     return features
 
 
-def get_qual_features(df):
+def get_qual_features(df, target_feature, ignore_features):
+    ignore_features = ignore_features.copy()
     features = [f for f in df.columns if df.dtypes[f] == 'object']
+    ignore_features.append(target_feature)
+    features = list(set(features) - set(ignore_features))
     return features
 
 
