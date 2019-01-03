@@ -82,3 +82,4 @@ def house_remodel_and_age(train_clean, test_clean):
         df = df.drop(['YearRemodAdd', 'YearBuilt'], axis=1)
         result.append(df)
     return result
+

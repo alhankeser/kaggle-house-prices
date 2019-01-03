@@ -26,22 +26,22 @@ DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'],DATA['TARGET_F
 # TODO: 
 ##  count encoded quals and remove ones with low sample size / pvalue
 CONFIGS = pd.DataFrame([
-    #  { # 0.130465 (LB: 0.12343)
-    #     'sum': [],
-    #     'multiply': [],
-    #     'drop': [],
-    #     'options': {
-    #         'use_default_clean': True,
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'skew_threshold': 0.4,
-    #         'scale_encoded_qual_features': True,
-    #         'bath_porch_sf': True,
-    #         'house_remodel_and_age': True
-    #     }
-    # },
-    # { # 0.139420
+     { # 0.120931
+        'sum': [],
+        'multiply': [],
+        'drop': ['BedroomAbvGr'],
+        'options': {
+            'use_default_clean': True,
+            'drop_corr': 0.1,
+            'normalize_target': True,
+            'normalize_quant_features': True,
+            'skew_threshold': 0.4,
+            'scale_encoded_qual_features': True,
+            'bath_porch_sf': True,
+            'house_remodel_and_age': True
+        }
+    },
+    # { # 0.130841
     #     'sum': [
     #         ['GrLivArea', 'TotalBsmtSF'], 
     #         ['1stFlrSF', '2ndFlrSF']
@@ -55,7 +55,7 @@ CONFIGS = pd.DataFrame([
     #         ['GarageArea', 'GarageQual_E_x_GarageCond_E'],
     #         ['PoolArea', 'PoolQC_E']
     #     ],
-    #     'drop': [],
+    #     'drop': ['BedroomAbvGr'],
     #     'options': {
     #         'use_default_clean': True,
     #         'drop_corr': 0.1,
