@@ -15,6 +15,12 @@ def run(DATA, CONFIG):
     normalize_quant_features = CONFIG['options']['normalize_quant_features']
     skew_threshold = CONFIG['options']['skew_threshold']
 
+    # Remove outliers
+    train_clean = train_clean.drop(train_clean[(train_clean['GrLivArea']>4000) & (train_clean[target_feature]<300000)].index)
+    train_clean = train_clean.drop(train_clean[(train_clean['TotalBsmtSF']>6000)].index)
+    train_clean = train_clean.drop(train_clean[(train_clean['1stFlrSF']>4000)].index)
+    train_clean = train_clean.drop(train_clean[(train_clean['GarageArea']>1400) & (train_clean[target_feature]<300000)].index)
+
     # Create qual features encoding lookup table
     qual_features_encoded = create_encoding_lookup(train_clean.fillna(0), DATA['QUAL_FEATURES'], DATA['TARGET_FEATURE'])
     # Get skewed features based on training data
