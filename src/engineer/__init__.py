@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-
+import operator
+import functools
 
 def drop_features(clean_train, clean_test, target_feature, drop, correlations=False, threshold=False):
     dfs = [clean_train, clean_test]
@@ -30,7 +31,6 @@ def sum_features(clean_train, clean_test, feature_sets):
 
 def multiply_features(clean_train, clean_test, feature_sets):
     dfs = [clean_train, clean_test]
-    result = pd.DataFrame([])
     for feature_set in feature_sets:
         multipled_name = '_x_'.join(feature_set[:])
         dfs[0][multipled_name] = dfs[0][feature_set[0]] * dfs[0][feature_set[1]]
@@ -82,3 +82,4 @@ def house_remodel_and_age(train_clean, test_clean):
         df = df.drop(['YearRemodAdd', 'YearBuilt'], axis=1)
         result.append(df)
     return result
+
