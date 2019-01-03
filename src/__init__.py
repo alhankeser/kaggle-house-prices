@@ -26,268 +26,12 @@ DATA['QUANT_FEATURES'] = explore.get_quant_features(DATA['TRAIN'],DATA['TARGET_F
 # TODO: 
 ##  count encoded quals and remove ones with low sample size / pvalue
 CONFIGS = pd.DataFrame([
-    # { # 0.154847
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    # {  # 0.157314
-    #     'combine': [['TotalBsmtSF','GrLivArea']],
-    #     'drop': ['BsmtFinSF1', 'BsmtFinSF2', '1stFlrSF', '2ndFlrSF', 'LowQualFinSF'],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    # {  # 0.154901
-    #     'combine': [['TotalBsmtSF','GrLivArea']],
-    #     'drop': ['MoSold', 'YrSold'],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    # {  # 0.155069
-    #     'combine': [],
-    #     'drop': ['MoSold', 'YrSold', 'BsmtFinSF1', 'BsmtFinSF2', '1stFlrSF', '2ndFlrSF', 'LowQualFinSF'],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    # {  # 0.157415
-    #     'combine': [['TotalBsmtSF','GrLivArea']],
-    #     'drop': ['MoSold', 'YrSold', 'BsmtFinSF1', 'BsmtFinSF2', '1stFlrSF', '2ndFlrSF', 'LowQualFinSF'],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    # { 
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'normalize_after_encode': False,
-    #         'scale_encoded_qual_features': True,
-    #         'scale_threshold': -1
-    #     }
-    # },
-    # { 
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'normalize_after_encode': True,
-    #         'scale_encoded_qual_features': True,
-    #         'scale_threshold': -1
-    #     }
-    # },
-    # { # 0.153464
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'normalize_after_encode': True,
-    #         'scale_encoded_qual_features': True,
-    #         'scale_threshold': 10
-    #     }
-    # },
-    # { # 0.15163
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'normalize_after_encode': True,
-    #         'scale_encoded_qual_features': True,
-    #         'scale_threshold': 10
-    #     }
-    # },
-    # { # 0.151401
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0,
-    #         'normalize_target': True,
-    #         'normalize_after_encode': True,
-    #         'scale_encoded_qual_features': True,
-    #         'scale_threshold': 20
-    #     }
-    # },
-    #  { # 0.14438 (LB: 0.12951)
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': False,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    #   { # 0.132941 (LB: 0.12499)
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': False
-    #     }
-    # },
-    #   { #0.131128 (LB: 0.12411)
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.15,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True
-    #     }
-    # },
-     # { # 0.150094
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_after_encode': True,
-    #         'scale_encoded_qual_features': True,
-    #         'scale_threshold': 10
-    #     }
-    # },
-    # { #0.149946
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_after_encode': True,
-    #         'scale_encoded_qual_features': True,
-    #         'scale_threshold': 15
-    #     }
-    # }
-    #   { # 0.131195
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True
-    #     }
-    # },
-    # { # on skew > 0.75 boxcox 0.130584 / log: 0.130318
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0.75
-    #     }
-    # }
-    # { 
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0
-    #     }
-    # },
-    # { 
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0.1
-    #     }
-    # },
-    # { 
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0.2
-    #     }
-    # },
-    # { 
-    #     'combine': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'scale_encoded_qual_features': True,
-    #         'skew_threshold': 0.3
-    #     }
-    # },
-    #  { # 0.130226
+    #  { # 0.130465 (LB: 0.12343)
     #     'sum': [],
     #     'multiply': [],
     #     'drop': [],
     #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'skew_threshold': 0.4,
-    #         'scale_encoded_qual_features': True,
-    #         'bath_porch_sf': False
-    #     }
-    # },
-    #  { # 0.130575
-    #     'sum': [],
-    #     'multiply': [],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'skew_threshold': 0.4,
-    #         'scale_encoded_qual_features': True,
-    #         'bath_porch_sf': True
-    #     }
-    # },
-     { # 0.130465 (LB: 0.12343)
-        'sum': [],
-        'multiply': [],
-        'drop': [],
-        'options': {
-            'drop_corr': 0.1,
-            'normalize_target': True,
-            'normalize_quant_features': True,
-            'skew_threshold': 0.4,
-            'scale_encoded_qual_features': True,
-            'bath_porch_sf': True,
-            'house_remodel_and_age': True
-        }
-    },
-    # { # 0.130214
-    #     'sum': [],
-    #     'multiply': [['GarageQual_E','GarageCond_E']],
-    #     'drop': [],
-    #     'options': {
+    #         'use_default_clean': True,
     #         'drop_corr': 0.1,
     #         'normalize_target': True,
     #         'normalize_quant_features': True,
@@ -297,39 +41,43 @@ CONFIGS = pd.DataFrame([
     #         'house_remodel_and_age': True
     #     }
     # },
-    # { # 0.130343 (LB: 0.12375)
-    #     'sum': [],
-    #     'multiply': [['GarageQual_E','GarageCond_E']],
+    # { # 0.139420
+    #     'sum': [
+    #         ['GrLivArea', 'TotalBsmtSF'], 
+    #         ['1stFlrSF', '2ndFlrSF']
+    #     ],
+    #     'multiply': [
+    #         ['OverallQual', 'OverallCond'], 
+    #         ['GarageQual_E', 'GarageCond_E'],
+    #         ['ExterQual_E', 'ExterCond_E'],
+    #         ['KitchenAbvGr', 'KitchenQual_E'],
+    #         ['Fireplaces', 'FireplaceQu_E'],
+    #         ['GarageArea', 'GarageQual_E_x_GarageCond_E'],
+    #         ['PoolArea', 'PoolQC_E']
+    #     ],
     #     'drop': [],
     #     'options': {
+    #         'use_default_clean': True,
     #         'drop_corr': 0.1,
     #         'normalize_target': True,
     #         'normalize_quant_features': True,
     #         'skew_threshold': 0.4,
     #         'scale_encoded_qual_features': True,
-    #         'bath_porch_sf': True
-    #     }
+    #         'bath_porch_sf': True,
+    #         'house_remodel_and_age': True
+    #     },
     # },
-    # { # 0.129931 (LB: 0.12812)
-    #     'sum': [],
-    #     'multiply': [['GarageQual_E','GarageCond_E']],
-    #     'drop': [],
-    #     'options': {
-    #         'drop_corr': 0.1,
-    #         'normalize_target': True,
-    #         'normalize_quant_features': True,
-    #         'skew_threshold': 0.4,
-    #         'scale_encoded_qual_features': True,
-    #         'bath_porch_sf': True
-    #     }
-    # }
 ])
 
 def score_configs(DATA, CONFIGS, times):
     scores_df = pd.DataFrame(columns=['configs', 'score', 'predictions', 'correlations', 'disparity'])
+    default_qual_features_encoded, default_train_clean, default_test_clean = clean.run(DATA, CONFIGS.iloc[0])
     while times > 0:
         for index, CONFIG in CONFIGS.iterrows():
-            qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
+            if CONFIG['options']['use_default_clean'] is False:
+                qual_features_encoded, train_clean, test_clean = clean.run(DATA, CONFIG)
+            else:
+                qual_features_encoded, train_clean, test_clean = (default_qual_features_encoded.copy(), default_train_clean.copy(), default_test_clean.copy())
             if CONFIG['options']['bath_porch_sf']:
                 train_clean, test_clean = engineer.bath_porch_sf(train_clean, test_clean)
             if CONFIG['options']['house_remodel_and_age']:
@@ -347,7 +95,7 @@ def score_configs(DATA, CONFIGS, times):
     # qual_std = qual_features_encoded.groupby('encoded_name')['num_val'].std().sort_values()
     # print(qual_std)
     # print(disparity)
-    # print(train_clean.head())
+    print(train_clean.columns)
     return scores_df
 
 scores_df = score_configs(DATA, CONFIGS, 10)
