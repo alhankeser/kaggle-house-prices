@@ -21,7 +21,28 @@ import warnings
 warnings.filterwarnings(action="ignore")
 
 
-class Data:
+class Explore:
+
+    def get_dtype(cls, include_type=[], exclude_type=[]):
+        df = cls.get_df('train')
+        df.drop(columns=[cls.target_col], inplace=True)
+        return df.select_dtypes(include=include_type, exclude=exclude_type)
+
+    def get_numeric(cls):
+        return cls.get_dtype(exclude_type=['object'])
+
+    def get_categorical(cls, as_df=False):
+        return cls.get_dtype(include_type=['object'])
+
+    def get_correlations(cls, method='spearman'):
+        df = cls.get_df('train')
+        corr_mat = df.corr(method=method)
+        corr_mat.sort_values(cls.target_col, inplace=True)
+        corr_mat.drop(cls.target_col, inplace=True)
+        return corr_mat[[cls.target_col]]
+
+
+class Data(Explore):
 
     def __init__(self, train_csv, test_csv, target='', ignore=[]):
         '''Create pandas DataFrame objects for train and test data.
@@ -34,33 +55,68 @@ class Data:
         target -- target feature column name in training data.
         ignore -- columns names in list to ignore during analyses.
         '''
-        self.train = pd.read_csv(train_csv)
-        self.test = pd.read_csv(test_csv)
-        self.target = self.train[target]
+        self.__train = pd.read_csv(train_csv)
+        self.__train.name = 'train'
+        self.__test = pd.read_csv(test_csv)
+        self.__test.name = 'test'
+        self.target_col = target
+        self.target = self.__train[[self.target_col]]
         self.ignore = ignore
-        self.__log = pd.DataFrame(columns=['entry', 'status'])
+        self.__original = False
+        self.__log = False
         self.check_in()
+        self.debug = True
 
     def __str__(cls):
-        train_columns = 'Train: "' + '", "'.join(cls.train.columns[:3]) + '"\n'
-        test_columns = 'Test: "' + '", "'.join(cls.test.columns[:3]) + '"\n\n'
+        train_columns = 'Train: \n"' + '", "'.join(cls.__train.head(2)) + '"\n'
+        test_columns = 'Test: \n"' + '", "'.join(cls.__test.head(2)) + '"\n'
         return train_columns + test_columns
 
+    def get_dfs(cls, ignore=True):
+        train, test = (cls.__train.copy(),
+                       cls.__test.copy())
+        train, test = (train.drop(columns=cls.ignore),
+                       test.drop(columns=cls.ignore))
+        train.name, test.name = (cls.__train.name,
+                                 cls.__test.name)
+        return (train, test)
+
+    def get_df(cls, name, ignore=True):
+        train, test = cls.get_dfs(ignore)
+        if name == 'train':
+            return train
+        if name == 'test':
+            return test
+
     def log(cls, entry=False, status=False):
+        if cls.__log is False:
+            cls.__log = pd.DataFrame(columns=['entry', 'status'])
         log_entry = pd.DataFrame({'entry': entry, 'status': status}, index=[0])
         cls.__log = cls.__log.append(log_entry, ignore_index=True)
-        cls.check_out()
+        if status == 'Fail':
+            cls.rollback()
+        else:
+            cls.check_out()
+        if cls.debug:
+            print(cls.__log)
 
     def check_in(cls):
-        cls.__current = (cls.test.head(1).copy(), cls.train.head(1).copy())
+        cls.__current = cls.get_dfs()
+        if cls.__original is False:
+            cls.__original = cls.__current
 
     def check_out(cls):
         cls.__previous = cls.__current
 
     def rollback(cls):
-        cls.test, cls.train = cls.__previous
+        cls.__train, cls.__test = cls.__previous
+        cls.log('rollback', 'Success')
 
-    def report(cls, ex_type, ex_value, name=False):
+    def reset(cls):
+        cls.__train, cls.__test = cls.__original
+        cls.log('reset', 'Success')
+
+    def report_exception(cls, ex_type, ex_value, name=False):
         print(ex_type.__name__, ex_value, name)
 
     def mutate(cls, mutation, *args):
@@ -77,44 +133,31 @@ class Data:
         '''
         cls.check_in()
         try:
-            mutation(cls.train, *args)
-            mutation(cls.test, *args)
-            cls.log(mutation.__name__, 'Success')
+            mutation(cls.__train, *args)
+            mutation(cls.__test, *args)
+            status = 'Success'
         except Exception:
-            ex_type, ex_value, ex_traceback = sys.exc_info()
-            cls.report(ex_type, ex_value, mutation.__name__)
-            cls.log(mutation.__name__, 'Fail')
-            cls.rollback()
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            cls.report_exception(exc_type, exc_value, mutation.__name__)
+            status = 'Fail'
+        cls.log(mutation.__name__, status)
 
 
-d = Data('./input/train.csv', './input/test.csv', 'SalePrice')
+d = Data('./input/train.csv', './input/test.csv', 'SalePrice', ['Id'])
+
+numeric = d.get_numeric()
+categorical = d.get_categorical()
+corrs = d.get_correlations()
+print(corrs)
 
 
-def drop_cols(df):
-    df.drop(columns=["SalePrice"], inplace=True)
+# print(numeric)
+# print(len(numeric))
 
+# print(categorical)
+# print(len(categorical))
 
-def update_feature(df):
-    # df.drop(columns=["MSSubClass"], inplace=True)
-    df["MSSubClass"] = df["MSSubClass"].apply(lambda x: x * 100)
-
-
-def more_cols(df, col=False):
-    df.drop(columns=[col], inplace=True)
-
-
-d.mutate(drop_cols)
-d.mutate(update_feature)
-d.mutate(more_cols, "MSZoning")
-
-
-def multiply_column_values(df, col_name=False, times=10):
-    df[col_name] = df[col_name] * times
-
-
-d.mutate(multiply_column_values, 'Id', 999)
-print(d._Data__log)
-print(d.train.head(1))
+# print(len(d.get_df('train').columns))
 
 '''
 

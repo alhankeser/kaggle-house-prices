@@ -113,8 +113,8 @@ def score_configs(DATA, CONFIGS, times):
         times -= 1
     # qual_std = qual_features_encoded.groupby('encoded_name')['num_val'].std().sort_values()
     # print(qual_std)
-    # print(disparity)
-    print(train_clean)
+    print(correlations)
+    print(train_clean[['is_remodeled', 'age', 'is_new_house', 'is_recent_remodel']])
     return scores_df
 
 scores_df = score_configs(DATA, CONFIGS, 10)
