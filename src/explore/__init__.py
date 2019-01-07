@@ -28,7 +28,7 @@ def get_qual_features(df, target_feature, ignore_features):
 def get_correlations(df, target_feature, method='spearman'):
     correlation_matrix = df.corr(method=method)
     correlation_matrix = correlation_matrix.sort_values(target_feature)
-    correlation_matrix = correlation_matrix.drop(target_feature)
+    # correlation_matrix = correlation_matrix.drop(target_feature)
     return correlation_matrix[[target_feature]]
 
 

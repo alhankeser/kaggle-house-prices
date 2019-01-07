@@ -29,13 +29,7 @@ CONFIGS = pd.DataFrame([
      { # 0.119222 (LB: 0.12128)
         'sum': [],
         'multiply': [],
-        'drop': ['BedroomAbvGr', 
-                'GarageYrBlt', 
-                'GarageArea', 
-                'FireplaceQu_E', 
-                'Alley_E',
-                'Condition2_E'
-                ],
+        'drop': [],
         'options': {
             'use_default_clean': True,
             'drop_corr': 0.1,
@@ -48,6 +42,22 @@ CONFIGS = pd.DataFrame([
             'house_remodel_and_age': True
         }
     },
+    # { 
+    #     'sum': [],
+    #     'multiply': [],
+    #     'drop': [],
+    #     'options': {
+    #         'use_default_clean': False,
+    #         'drop_corr': 0,
+    #         'normalize_target': True,
+    #         'normalize_quant_features': False,
+    #         'skew_threshold': 0.0,
+    #         'scale_encoded_qual_features': False,
+    #         'scale_quant_features': False,
+    #         'bath_porch_sf': True,
+    #         'house_remodel_and_age': True
+    #     }
+    # },
     # { # 0.130841
     #     'sum': [
     #         ['GrLivArea', 'TotalBsmtSF'], 
@@ -103,8 +113,8 @@ def score_configs(DATA, CONFIGS, times):
         times -= 1
     # qual_std = qual_features_encoded.groupby('encoded_name')['num_val'].std().sort_values()
     # print(qual_std)
-    # print(disparity)
-    print(train_clean.columns)
+    print(correlations)
+    print(train_clean[['is_remodeled', 'age', 'is_new_house', 'is_recent_remodel']])
     return scores_df
 
 scores_df = score_configs(DATA, CONFIGS, 10)
