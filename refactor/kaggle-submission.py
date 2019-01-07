@@ -7,9 +7,11 @@ https://www.kaggle.com/alhankeser/beginner-eda-and-data-cleaning
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
 import scipy.stats as stats
 import math
 import time
@@ -262,6 +264,30 @@ class Model:
         score = math.sqrt(mean_squared_error(y_test, X_predictions))
         return (model, score)
 
+    def grid_search(cls, model, parameters):
+        train, test = cls.get_dfs()
+        X = train.drop(columns=[cls.target_col])
+        y = train[cls.target_col]
+        model = GridSearchCV(model(), parameters, cv=10)
+        model.fit(X, y)
+        predictions = model.predict(test)
+        now = str(time.time()).split('.')[0]
+        df = cls.get_df('test', False, True)
+        target = cls.target_col
+        df[target] = predictions
+        df[target] = df[target].apply(lambda x: np.expm1(x))
+        print(df[target].head())
+        df[[df.columns[0], target]].to_csv('submit-' + now + '.csv',
+                                           index=False)
+        # return predictions
+        # print(predictions)
+        # print(model)
+        # print(sorted(model.cv_results_.keys()))
+        # print(model.cv_results_['mean_train_score'])
+        # print(model.cv_results_['mean_test_score'])
+        # print(predictions)
+        
+
     def fit(cls, model):
         train, test = cls.get_dfs()
         target_data = train[cls.target_col]
@@ -276,6 +302,7 @@ class Model:
         target = cls.target_col
         df[target] = predictions
         df[target] = df[target].apply(lambda x: np.expm1(x))
+        print(df[target].head())
         df[[df.columns[0], target]].to_csv('submit-' + now + '.csv',
                                            index=False)
 
@@ -395,7 +422,7 @@ class Data(Explore, Clean, Engineer, Model):
         cls.log(mutation.__name__, status)
 
 
-def run(d, x_val_times):
+def run(d, x_val_times, parameters):
     mutate = d.mutate
     mutate(d.remove_outliers)
     mutate(d.fill_na)
@@ -410,21 +437,23 @@ def run(d, x_val_times):
     mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
-    scores = np.array([])
-    while x_val_times > 0:
-        model, score = d.cross_validate(LinearRegression,
-                                        int(x_val_times ** 2))
-        scores = np.append(scores, score)
-        x_val_times -= 1
-    print(np.round(scores.mean(), decimals=5))
-    predictions = d.fit(model)
-    d.print_log()
-    return predictions
+    # scores = np.array([])
+    # while x_val_times > 0:
+    #     model, score = d.cross_validate(LinearRegression,
+    #                                     int(x_val_times ** 2))
+    #     scores = np.append(scores, score)
+    #     x_val_times -= 1
+    # print(np.round(scores.mean(), decimals=5))
+    # predictions = d.fit(model)
+    # d.print_log()
+    # return predictions
+    d.grid_search(RandomForestRegressor, parameters)
 
 
 cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
 d = Data('./input/train.csv', './input/test.csv', 'SalePrice', cols_to_ignore)
-predictions = run(d, 10)
-d.save_predictions(predictions)
+parameters = {}
+run(d, 10, parameters)
+# d.save_predictions(predictions)
 # 0.11683
