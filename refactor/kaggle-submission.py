@@ -1,6 +1,6 @@
 '''
-DISCLAIMER:
-Refactor in progress.
+See accompanying notebook with Exploratory Data Analysis:
+https://www.kaggle.com/alhankeser/beginner-eda-and-data-cleaning
 '''
 
 # External libraries
@@ -76,7 +76,6 @@ class Clean:
 
     def fill_na(cls, df):
         df.fillna(0, inplace=True)
-        # df[df.isna()] = df[[df.isna()]].apply(lambda x: 0)
         return df
 
     def get_encoding_lookup(cls, cols):
@@ -194,7 +193,8 @@ class Engineer:
 
     def house_remodel_age(cls, df):
         # if no remodeling or additions))
-        df['Is_Remodeled'] = (df['YearRemodAdd'] != df['YearBuilt']).astype(int)
+        df['Is_Remodeled'] = (df['YearRemodAdd'] !=
+                              df['YearBuilt']).astype(int)
 
         # add feature about the age of the house when sold
         df['Age'] = df['YrSold'] - df['YearBuilt']
@@ -205,15 +205,18 @@ class Engineer:
         df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(int)
 
         # add flag is remodel was recent (i.e. within 2 years of the sale)
-        df['Is_Recent_Remodel'] = (df['YrSold'] - df['YearRemodAdd'] <= 2).astype(int)
+        df['Is_Recent_Remodel'] = (df['YrSold'] -
+                                   df['YearRemodAdd'] <= 2).astype(int)
 
         # drop the original columns
-        df.drop(['YearRemodAdd', 'YearBuilt', 'GarageYrBlt'], axis=1, inplace=True)
+        df.drop(['YearRemodAdd', 'YearBuilt', 'GarageYrBlt'],
+                axis=1, inplace=True)
         return df
 
     def garage_age(cls, df):
         # if no remodeling or additions))
-        df['Is_Remodeled'] = (df['YearRemodAdd'] != df['YearBuilt']).astype(int)
+        df['Is_Remodeled'] = (df['YearRemodAdd'] !=
+                              df['YearBuilt']).astype(int)
 
         # add feature about the age of the house when sold
         df['Age'] = df['YrSold'] - df['YearBuilt']
@@ -222,7 +225,8 @@ class Engineer:
         df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(int)
 
         # add flag is remodel was recent (i.e. within 2 years of the sale)
-        df['Is_Recent_Remodel'] = (df['YrSold'] - df['YearRemodAdd'] <= 2).astype(int)
+        df['Is_Recent_Remodel'] = (df['YrSold'] -
+                                   df['YearRemodAdd'] <= 2).astype(int)
 
         # drop the original columns
         df.drop(['YearRemodAdd', 'YearBuilt'], axis=1, inplace=True)
@@ -230,14 +234,16 @@ class Engineer:
 
     def sum_features(cls, df, feature_sets):
         for feature_set in feature_sets:
-            summed_name = '_+_'.join(feature_set[:])
-            df.drop(feature_set, axis=1, inplace=True)
+            # summed_name = '_+_'.join(feature_set[:])
+            # df.drop(feature_set, axis=1, inplace=True)
+            pass
         return df
 
     def multiply_features(cls, df, feature_sets):
         for feature_set in feature_sets:
-            multipled_name = '_x_'.join(feature_set[:])
-            df.drop(feature_set, axis=1, inplace=True)
+            # multipled_name = '_x_'.join(feature_set[:])
+            # df.drop(feature_set, axis=1, inplace=True)
+            pass
         return df
 
 
@@ -270,7 +276,7 @@ class Model:
         target = cls.target_col
         df[target] = predictions
         df[target] = df[target].apply(lambda x: np.expm1(x))
-        df[[df.columns[0], target]].to_csv('output/submit-' + now + '.csv',
+        df[[df.columns[0], target]].to_csv('submit-' + now + '.csv',
                                            index=False)
 
 
@@ -397,18 +403,17 @@ def run(d, x_val_times):
     mutate(d.bath_porch_sf)
     mutate(d.house_remodel_age)
     mutate(d.normalize_features, [d.target_col])
-    numeric_cols = d.get_numeric().columns.values
-    skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
+    # numeric_cols = d.get_numeric().columns.values
+    # skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
     # mutate(d.normalize_features, skewed_features)
-    mutate(d.drop_low_corr)
     # mutate(d.scale_quant_features, numeric_cols)
+    mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
-    # df = d.get_df('train')
-    # print(df.head(2))
     scores = np.array([])
     while x_val_times > 0:
-        model, score = d.cross_validate(LinearRegression, int(x_val_times ** 2))
+        model, score = d.cross_validate(LinearRegression,
+                                        int(x_val_times ** 2))
         scores = np.append(scores, score)
         x_val_times -= 1
     print(np.round(scores.mean(), decimals=5))
@@ -417,9 +422,9 @@ def run(d, x_val_times):
     return predictions
 
 
-d = Data('./input/train.csv', './input/test.csv', 'SalePrice',
-         ['Id', 'BedroomAbvGr', 'GarageArea',
-          'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E'])
+cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
+                  'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
+d = Data('./input/train.csv', './input/test.csv', 'SalePrice', cols_to_ignore)
 predictions = run(d, 10)
 d.save_predictions(predictions)
-# 0.11728
+# 0.11683
