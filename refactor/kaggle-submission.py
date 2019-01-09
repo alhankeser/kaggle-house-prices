@@ -268,25 +268,10 @@ class Model:
         train, test = cls.get_dfs()
         X = train.drop(columns=[cls.target_col])
         y = train[cls.target_col]
-        model = GridSearchCV(model(), parameters, cv=10)
+        model = GridSearchCV(model(), parameters, cv=10,
+                             scoring='neg_mean_squared_error')
         model.fit(X, y)
-        predictions = model.predict(test)
-        now = str(time.time()).split('.')[0]
-        df = cls.get_df('test', False, True)
-        target = cls.target_col
-        df[target] = predictions
-        df[target] = df[target].apply(lambda x: np.expm1(x))
-        print(df[target].head())
-        df[[df.columns[0], target]].to_csv('submit-' + now + '.csv',
-                                           index=False)
-        # return predictions
-        # print(predictions)
-        # print(model)
-        # print(sorted(model.cv_results_.keys()))
-        # print(model.cv_results_['mean_train_score'])
-        # print(model.cv_results_['mean_test_score'])
-        # print(predictions)
-        
+        return model
 
     def fit(cls, model):
         train, test = cls.get_dfs()
@@ -302,7 +287,6 @@ class Model:
         target = cls.target_col
         df[target] = predictions
         df[target] = df[target].apply(lambda x: np.expm1(x))
-        print(df[target].head())
         df[[df.columns[0], target]].to_csv('submit-' + now + '.csv',
                                            index=False)
 
@@ -422,10 +406,10 @@ class Data(Explore, Clean, Engineer, Model):
         cls.log(mutation.__name__, status)
 
 
-def run(d, x_val_times, parameters):
+def run(d, model, parameters):
     mutate = d.mutate
-    mutate(d.remove_outliers)
-    mutate(d.fill_na)
+    # mutate(d.remove_outliers)
+    # mutate(d.fill_na)
     mutate(d.encode_categorical, [], 'target_median')
     mutate(d.bath_porch_sf)
     mutate(d.house_remodel_age)
@@ -437,23 +421,26 @@ def run(d, x_val_times, parameters):
     mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
-    # scores = np.array([])
-    # while x_val_times > 0:
-    #     model, score = d.cross_validate(LinearRegression,
-    #                                     int(x_val_times ** 2))
-    #     scores = np.append(scores, score)
-    #     x_val_times -= 1
-    # print(np.round(scores.mean(), decimals=5))
-    # predictions = d.fit(model)
-    # d.print_log()
-    # return predictions
-    d.grid_search(RandomForestRegressor, parameters)
+    model = d.grid_search(model, parameters)
+    predictions = d.fit(model)
+    d.print_log()
+    print(model.best_params_)
+    print(model.best_score_)
+    return predictions
 
 
+model = RandomForestRegressor
 cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
 d = Data('./input/train.csv', './input/test.csv', 'SalePrice', cols_to_ignore)
-parameters = {}
-run(d, 10, parameters)
-# d.save_predictions(predictions)
-# 0.11683
+parameters = {
+    'n_estimators': [300],
+    'oob_score': [True],
+    'n_jobs': [-1],
+    'random_state': [50],
+    'max_features': ['sqrt'],
+    'min_samples_leaf': [2]
+    }
+predictions = run(d, model, parameters)
+d.save_predictions(predictions)
+# -0.01756817991302172
