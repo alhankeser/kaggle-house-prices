@@ -3,3 +3,5 @@
 .vscode/*
 output/*
 *submit*.csv
+*meta*.csv
+*final*.csv

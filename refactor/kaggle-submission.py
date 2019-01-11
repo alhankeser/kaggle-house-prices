@@ -281,9 +281,10 @@ class Model:
         train.drop(cls.target_col, axis=1, inplace=True)
         model.fit(train, target_data)
         X_predictions = model.predict(train)
-        print(explained_variance_score(X_predictions, target_data))
+        # print(explained_variance_score(X_predictions, target_data))
+        print(math.sqrt(mean_squared_error(target_data, X_predictions)))
         predictions = model.predict(test)
-        return predictions
+        return (predictions, X_predictions)
 
     def save_predictions(cls, predictions):
         now = str(time.time()).split('.')[0]
@@ -379,6 +380,7 @@ class Data(Explore, Clean, Engineer, Model):
 
     def reset(cls):
         cls.__train, cls.__test = cls.__original
+        cls.__train.name, cls.__test.name = cls.get_df_names()
         cls.log('reset', 'Success')
 
     def update_dfs(cls, train, test):
@@ -412,56 +414,39 @@ class Data(Explore, Clean, Engineer, Model):
 
 def run(d, model, parameters):
     mutate = d.mutate
-    mutate(d.remove_outliers)
+    # mutate(d.remove_outliers)
     mutate(d.fill_na)
     mutate(d.encode_categorical, [], 'target_median')
     mutate(d.bath_porch_sf)
     mutate(d.house_remodel_age)
     mutate(d.normalize_features, [d.target_col])
-    numeric_cols = d.get_numeric().columns.values
-    skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
-    mutate(d.normalize_features, skewed_features)
+    # numeric_cols = d.get_numeric().columns.values
+    # skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
+    # mutate(d.normalize_features, skewed_features)
     # mutate(d.scale_quant_features, numeric_cols)
-    # mutate(d.drop_low_corr)
+    mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
     model = d.grid_search(model, parameters)
-    predictions = d.fit(model)
+    predictions, X_predictions = d.fit(model)
     d.print_log()
-    print(model.best_params_)
-    print(model.best_score_)
-    return predictions
+    # print(model.best_params_)
+    # print(model.best_score_)
+    return (predictions, X_predictions)
 
 
-model = xgb.XGBRegressor
-# cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
-#                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
-cols_to_ignore = ['Id']
+cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
+                  'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
 d = Data('./input/train.csv',
          './input/test.csv',
          'SalePrice', cols_to_ignore)
-# parameters = {
-#     'base_score': [0.5],
-#     'colsample_bylevel': [1],
-#     'colsample_bytree': [1],
-#     'gamma': [0],
-#     'learning_rate': [0.08],
-#     'max_delta_step': [0],
-#     'max_depth': [3],
-#     'min_child_weight': [1],
-#     'missing': [None],
-#     'n_estimators': [400],
-#     'nthread': [-1],
-#     'objective': ['reg:linear'],
-#     'reg_alpha': [0],
-#     'reg_lambda': [1],
-#     'scale_pos_weight': [1],
-#     'seed': [0],
-#     'silent': [True],
-#     'subsample': [0.75]
-# }
+
+# model_paramater_sets = [
+#     {'model': }
+# ]
+model = xgb.XGBRegressor
 parameters = {
-    'max_depth': [3],
+    'max_depth': [10],
     'n_estimators': [400]
     }
 # parameters = {
@@ -472,6 +457,63 @@ parameters = {
 #     'max_features': ['sqrt'],
 #     'min_samples_leaf': [2]
 #     }
-predictions = run(d, model, parameters)
+# model = LinearRegression
+# parameters = {}
+
+predictions, X_predictions = run(d, model, parameters)
 d.save_predictions(predictions)
-# -0.01756817991302172
+# d = Data('./input/train.csv',
+#          './input/test.csv',
+#          'SalePrice', cols_to_ignore)
+# models_parameters = [
+#     # {
+#     #     'model': LinearRegression,
+#     #     'parameters': {}
+#     # },
+#     {
+#         'model': xgb.XGBRegressor,
+#         'parameters': {
+#             'max_depth': [10],
+#             'n_estimators': [400]
+#         }
+#     },
+#     {
+#         'model': RandomForestRegressor,
+#         'parameters': {
+#             'n_estimators': [300],
+#             'oob_score': [True],
+#             'n_jobs': [-1],
+#             'random_state': [50],
+#             'max_features': ['sqrt'],
+#             'min_samples_leaf': [10]
+#         }
+#     },
+# ]
+# predictions_df = d.get_df('test', False, True)[['Id']]
+# X_predictions_df = d.get_df('train', False, True)[['Id']]
+# d.mutate(d.normalize_features, [d.target_col])
+# X_predictions_df['SalePrice'] = d.get_df('train')['SalePrice']
+# for mp in models_parameters:
+#     d.reset()
+#     predictions, X_predictions = run(d, mp['model'], mp['parameters'])
+#     predictions_df[mp['model'].__name__] = predictions
+#     X_predictions_df[mp['model'].__name__] = X_predictions
+
+# print(X_predictions_df.drop(['Id'], axis=1).corr())
+
+# now = str(time.time()).split('.')[0]
+# predictions_df.to_csv('meta-' + now + '.csv', index=False)
+
+# train_x = X_predictions_df.drop(['Id','SalePrice'], axis=1)
+# train_y = X_predictions_df['SalePrice']
+# final_model = LinearRegression()
+# final_model.fit(train_x, train_y)
+# final_predictions = final_model.predict(predictions_df.drop(['Id'], axis=1))
+# predictions_df['SalePrice'] = final_predictions
+# predictions_df['SalePrice'] = predictions_df['SalePrice']\
+#                               .apply(lambda x: np.expm1(x))
+# now = str(time.time()).split('.')[0]
+# predictions_df[['Id', 'SalePrice']].to_csv('final-' + now + '.csv',
+#                                            index=False)
+# print(predictions_df.head())
+# -0.013149320485748574
