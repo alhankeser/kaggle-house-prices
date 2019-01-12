@@ -6,6 +6,8 @@ https://www.kaggle.com/alhankeser/beginner-eda-and-data-cleaning
 # External libraries
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.linear_model import LinearRegression
 # from sklearn.ensemble import RandomForestRegressor
 # import xgboost as xgb
@@ -25,6 +27,7 @@ import warnings
 
 # Options
 pd.set_option('display.max_columns', 100)
+pd.set_option('display.max_rows', 200)
 warnings.filterwarnings(action="ignore")
 
 
@@ -39,7 +42,7 @@ class Explore:
         return cls.get_dtype(exclude_type=['object'])
 
     def get_categorical(cls, as_df=False):
-        return cls.get_dtype(include_type=['object'])
+        return cls.get_dtype(include_type=['object', 'bool'])
 
     def get_correlations(cls, method='spearman'):
         df = cls.get_df('train')
@@ -54,6 +57,10 @@ class Explore:
         skewed = feat_skew[abs(feat_skew['skew']) > skew_threshold].index
         return skewed.values
 
+    def show_boxplot(cls, x, y, **kwargs):
+        sns.boxplot(x=x, y=y)
+        x = plt.xticks(rotation=90)
+
 
 class Clean:
 
@@ -65,8 +72,16 @@ class Clean:
                     inplace=True)
         return df
 
+    def fill_by_type(cls, x, col):
+        if pd.isna(x):
+            if col.dtype == 'object':
+                return ''
+            return 0
+        return x
+
     def fill_na(cls, df):
-        df.fillna(0, inplace=True)
+        for col in df.columns:
+            df[col] = df[col].apply(lambda x: cls.fill_by_type(x, df[col]))
         return df
 
     def get_encoding_lookup(cls, cols):
@@ -131,12 +146,19 @@ class Clean:
         df.drop(cols, axis=1, inplace=True)
         return df
 
+    def fix_zero_infinity(cls, x):
+        if (x == 0) or math.isinf(x):
+            return 0
+        return x
+
     def normalize_features(cls, df, cols=[]):
         if len(cols) == 0:
             cols = cls.get_numeric().columns.values
         for col in cols:
             if col in df.columns:
-                df[col] = df[col].apply(lambda x: np.log1p(x))
+                df[col] = df[col].apply(lambda x:
+                                        np.log1p(x).astype('float64'))
+                df[col] = df[col].apply(lambda x: cls.fix_zero_infinity(x))
         return df
 
     def scale_quant_features(cls, df, cols):
@@ -159,14 +181,27 @@ class Clean:
         to_drop = pd.DataFrame(columns=['drop'])
         corr_mat = cls.get_correlations()
         target = cls.target_col
-        to_drop['drop'] = corr_mat[(corr_mat[target] <= threshold) &
-                                   (corr_mat[target] >= (threshold * -1))
-                                   ].index
+        to_drop['drop'] = corr_mat[(abs(corr_mat[target]) <= threshold)].index
         df.drop(to_drop['drop'], axis=1, inplace=True)
         return df
 
 
 class Engineer:
+
+    def convert_to_string(cls, df, cols):
+        for col in cols:
+            df[col] = df[col].astype('str')
+        return df
+
+    def is_regular_shape(cls, df):
+        df['Is_Regular_Shape'] = (df['LotShape'] == 'Reg').astype(bool)
+        df.drop('LotShape', axis=1, inplace=True)
+        return df
+
+    def has_pool(cls, df):
+        df['Has_Pool'] = (df['PoolQC'] == '').astype(bool)
+        df.drop('PoolQC', axis=1, inplace=True)
+        return df
 
     def bath_porch_sf(cls, df):
         # Total SF for bathroom
@@ -186,7 +221,7 @@ class Engineer:
     def house_remodel_age(cls, df):
         # if no remodeling or additions))
         df['Is_Remodeled'] = (df['YearRemodAdd'] !=
-                              df['YearBuilt']).astype(int)
+                              df['YearBuilt']).astype(bool)
 
         # add feature about the age of the house when sold
         df['Age'] = df['YrSold'] - df['YearBuilt']
@@ -194,11 +229,11 @@ class Engineer:
         df['Garage_Age'] = df['YrSold'] - df['GarageYrBlt']
 
         # add flag if house was sold 2 years or less after it was built
-        df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(int)
+        df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(bool)
 
         # add flag is remodel was recent (i.e. within 2 years of the sale)
         df['Is_Recent_Remodel'] = (df['YrSold'] -
-                                   df['YearRemodAdd'] <= 2).astype(int)
+                                   df['YearRemodAdd'] <= 2).astype(bool)
 
         # drop the original columns
         df.drop(['YearRemodAdd', 'YearBuilt', 'GarageYrBlt'],
@@ -208,17 +243,17 @@ class Engineer:
     def garage_age(cls, df):
         # if no remodeling or additions))
         df['Is_Remodeled'] = (df['YearRemodAdd'] !=
-                              df['YearBuilt']).astype(int)
+                              df['YearBuilt']).astype(bool)
 
         # add feature about the age of the house when sold
         df['Age'] = df['YrSold'] - df['YearBuilt']
 
         # add flag if house was sold 2 years or less after it was built
-        df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(int)
+        df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(bool)
 
         # add flag is remodel was recent (i.e. within 2 years of the sale)
         df['Is_Recent_Remodel'] = (df['YrSold'] -
-                                   df['YearRemodAdd'] <= 2).astype(int)
+                                   df['YearRemodAdd'] <= 2).astype(bool)
 
         # drop the original columns
         df.drop(['YearRemodAdd', 'YearBuilt'], axis=1, inplace=True)
@@ -226,7 +261,7 @@ class Engineer:
 
     def sum_features(cls, df, col_sum):
         for col_set in col_sum:
-            f_name = '_+_'.join(col_set[:])
+            f_name = '__'.join(col_set[:])
             df[f_name] = df[[*col_set]].sum(axis=1)
             df.drop(col_set, axis=1, inplace=True)
         return df
@@ -401,20 +436,37 @@ class Data(Explore, Clean, Engineer, Model):
 
 def run(d, model, parameters):
     mutate = d.mutate
-    mutate(d.remove_outliers)
-    mutate(d.sum_features, d.col_sum)
     mutate(d.fill_na)
-    mutate(d.encode_categorical, [], 'target_median')
+    mutate(d.remove_outliers)
+
+    # Feature Engineering
+    mutate(d.sum_features, d.col_sum)
     mutate(d.bath_porch_sf)
     mutate(d.house_remodel_age)
+    mutate(d.is_regular_shape)
+    mutate(d.has_pool)
+    mutate(d.convert_to_string, ['MSSubClass', 'YrSold', 'MoSold'])
+
+    # Show categorical facetgrid w/ boxplots
+    categorical = d.get_categorical().columns.values
+    train = d.get_df('train')
+    categorical = pd.melt(train, id_vars=['SalePrice'],
+                          value_vars=categorical)
+    facet_grid = sns.FacetGrid(categorical, col="variable",
+                               col_wrap=3, sharex=False, sharey=False, size=5)
+    facet_grid = facet_grid.map(d.show_boxplot, "value", "SalePrice")
+    plt.show()
+
+    mutate(d.encode_categorical, [], 'target_median')
     mutate(d.normalize_features, [d.target_col])
-    # numeric_cols = d.get_numeric().columns.values
+    numeric_cols = d.get_numeric().columns.values
+    mutate(d.scale_quant_features, numeric_cols)
     # skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
     # mutate(d.normalize_features, skewed_features)
-    # mutate(d.scale_quant_features, numeric_cols)
     # mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
+    print(d.get_df('train').corr()['SalePrice'].sort_values())
     model = d.grid_search(model, parameters)
     predictions, score = d.fit(model)
     d.print_log()
@@ -424,22 +476,26 @@ def run(d, model, parameters):
 
 model = LinearRegression
 parameters = {}
-cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
-                  'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
+# cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
+#                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
+cols_to_ignore = ['Id']
 col_sum = [
-    # ['LandContour', 'LotShape', 'LotConfig', 'LandSlope'],
+    # ['LandContour', 'LotShape', 'LotConfig', 'LotFrontage', 'LandSlope'],
     # ['Condition1', 'Condition2'],
     # ['BldgType', 'HouseStyle'],
-    ['RoofStyle', 'RoofMatl']
-    # ['Exterior1st', 'Exterior2nd']
-    # ['ExterQual', 'ExterCond']
-    # ['BsmtQual', 'BsmtCond']
+    # ['RoofStyle', 'RoofMatl'],
+    # ['Exterior1st', 'Exterior2nd', 'ExterQual', 'ExterCond'],
+    # ['BsmtQual', 'BsmtCond'],
+    # ['HeatingQC', 'CentralAir'],
+    # ['GarageType', 'GarageFinish', 'GarageQual', 'GarageCond'],
+    # ['Functional', 'LandContour']
 ]
 d = Data('./input/train.csv',
          './input/test.csv',
          'SalePrice',
          cols_to_ignore,
          col_sum)
+# print(d.get_df('train').columns)
 predictions = run(d, model, parameters)
 d.save_predictions(predictions)
-# 0.10772
+# 0.10751
