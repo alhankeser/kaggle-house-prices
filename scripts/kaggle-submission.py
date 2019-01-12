@@ -42,7 +42,7 @@ class Explore:
         return cls.get_dtype(exclude_type=['object'])
 
     def get_categorical(cls, as_df=False):
-        return cls.get_dtype(include_type=['object', 'bool'])
+        return cls.get_dtype(include_type=['object'])
 
     def get_correlations(cls, method='spearman'):
         df = cls.get_df('train')
@@ -455,7 +455,7 @@ def run(d, model, parameters):
     facet_grid = sns.FacetGrid(categorical, col="variable",
                                col_wrap=3, sharex=False, sharey=False, size=5)
     facet_grid = facet_grid.map(d.show_boxplot, "value", "SalePrice")
-    plt.show()
+    # plt.show()
 
     mutate(d.encode_categorical, [], 'target_median')
     mutate(d.normalize_features, [d.target_col])
