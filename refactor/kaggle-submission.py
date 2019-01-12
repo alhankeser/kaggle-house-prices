@@ -281,7 +281,10 @@ class Model:
         train.drop(cls.target_col, axis=1, inplace=True)
         model.fit(train, target_data)
         X_predictions = model.predict(train)
+        print(pd.DataFrame({'predictions:': X_predictions,
+                            'SalePrice': target_data}).corr())
         print(explained_variance_score(X_predictions, target_data))
+        print(math.sqrt(mean_squared_error(target_data, X_predictions)))
         predictions = model.predict(test)
         return predictions
 
@@ -412,7 +415,7 @@ class Data(Explore, Clean, Engineer, Model):
 
 def run(d, model, parameters):
     mutate = d.mutate
-    mutate(d.remove_outliers)
+    # mutate(d.remove_outliers)
     mutate(d.fill_na)
     mutate(d.encode_categorical, [], 'target_median')
     mutate(d.bath_porch_sf)
@@ -462,7 +465,10 @@ d = Data('./input/train.csv',
 # }
 parameters = {
     'max_depth': [3],
-    'n_estimators': [400]
+    'n_estimators': [400],
+    'eta': [0.009],
+    'min_child_weight': [2.5],
+    'subsample': [0.6]
     }
 # parameters = {
 #     'n_estimators': [300],
