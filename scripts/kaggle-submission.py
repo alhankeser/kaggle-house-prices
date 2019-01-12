@@ -116,6 +116,7 @@ class Clean:
 
     def encode_onehot(cls, df, cols):
         df = pd.concat([df, pd.get_dummies(df[cols], drop_first=True)], axis=1)
+        print(df.head(2))
         return df
 
     def encode_categorical(cls, df, cols=[], method='one_hot'):
@@ -223,11 +224,11 @@ class Engineer:
         df.drop(['YearRemodAdd', 'YearBuilt'], axis=1, inplace=True)
         return df
 
-    def sum_features(cls, df, feature_sets):
-        for feature_set in feature_sets:
-            # summed_name = '_+_'.join(feature_set[:])
-            # df.drop(feature_set, axis=1, inplace=True)
-            pass
+    def sum_features(cls, df, col_sum):
+        for col_set in col_sum:
+            f_name = '_+_'.join(col_set[:])
+            df[f_name] = df[[*col_set]].sum(axis=1)
+            df.drop(col_set, axis=1, inplace=True)
         return df
 
     def multiply_features(cls, df, feature_sets):
@@ -284,7 +285,7 @@ class Model:
 
 class Data(Explore, Clean, Engineer, Model):
 
-    def __init__(self, train_csv, test_csv, target='', ignore=[]):
+    def __init__(self, train_csv, test_csv, target='', ignore=[], col_sum=[]):
         '''Create pandas DataFrame objects for train and test data.
 
         Positional arguments:
@@ -300,6 +301,7 @@ class Data(Explore, Clean, Engineer, Model):
         self.__train.name, self.__test.name = self.get_df_names()
         self.target_col = target
         self.ignore = ignore
+        self.col_sum = col_sum
         self.__original = False
         self.__log = False
         self.check_in()
@@ -400,6 +402,7 @@ class Data(Explore, Clean, Engineer, Model):
 def run(d, model, parameters):
     mutate = d.mutate
     mutate(d.remove_outliers)
+    mutate(d.sum_features, d.col_sum)
     mutate(d.fill_na)
     mutate(d.encode_categorical, [], 'target_median')
     mutate(d.bath_porch_sf)
@@ -415,7 +418,7 @@ def run(d, model, parameters):
     model = d.grid_search(model, parameters)
     predictions, score = d.fit(model)
     d.print_log()
-    print(score)
+    print(round(score, 5))
     return predictions
 
 
@@ -423,8 +426,20 @@ model = LinearRegression
 parameters = {}
 cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
+col_sum = [
+    # ['LandContour', 'LotShape', 'LotConfig', 'LandSlope'],
+    # ['Condition1', 'Condition2'],
+    # ['BldgType', 'HouseStyle'],
+    ['RoofStyle', 'RoofMatl']
+    # ['Exterior1st', 'Exterior2nd']
+    # ['ExterQual', 'ExterCond']
+    # ['BsmtQual', 'BsmtCond']
+]
 d = Data('./input/train.csv',
          './input/test.csv',
-         'SalePrice', cols_to_ignore)
+         'SalePrice',
+         cols_to_ignore,
+         col_sum)
 predictions = run(d, model, parameters)
 d.save_predictions(predictions)
+# 0.10772
