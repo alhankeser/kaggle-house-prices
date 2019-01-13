@@ -11,8 +11,8 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 # from sklearn.ensemble import RandomForestRegressor
 # import xgboost as xgb
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+# from sklearn.model_selection import train_test_split
+# from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 # from sklearn.metrics import explained_variance_score
@@ -38,6 +38,9 @@ class Explore:
         df.drop(columns=[cls.target_col], inplace=True)
         return df.select_dtypes(include=include_type, exclude=exclude_type)
 
+    def get_non_numeric(cls):
+        return cls.get_dtype(exclude_type=['float64', 'int', 'float32'])
+
     def get_numeric(cls):
         return cls.get_dtype(exclude_type=['object'])
 
@@ -60,6 +63,21 @@ class Explore:
     def show_boxplot(cls, x, y, **kwargs):
         sns.boxplot(x=x, y=y)
         x = plt.xticks(rotation=90)
+
+    def plot_categorical(cls, df, cols):
+        categorical = pd.melt(df, id_vars=['SalePrice'],
+                              value_vars=cols)
+        grouped = categorical.groupby(['value', 'variable'],
+                                      as_index=False)['SalePrice']\
+            .median().rename(columns={'SalePrice': 'SalePrice_Median'})
+        categorical = pd.merge(categorical, grouped, how='left',
+                               on=['variable', 'value'])\
+            .sort_values('SalePrice_Median')
+        facet_grid = sns.FacetGrid(categorical, col="variable",
+                                   col_wrap=3, size=5,
+                                   sharex=False, sharey=False,)
+        facet_grid = facet_grid.map(cls.show_boxplot, "value", "SalePrice")
+        plt.savefig('boxplots.png')
 
 
 class Clean:
@@ -188,19 +206,96 @@ class Clean:
 
 class Engineer:
 
+    def group_slope(cls, x):
+        if x in ['Sev', 'Mod']:
+            return 'Slope'
+        return x
+
+    def land_slope(cls, df):
+        df['LandSlope'] = df['LandSlope'].apply(lambda x: cls.group_slope(x))
+        return df
+
+    def group_lot(cls, x):
+        if x in ['Inside', 'Corner', 'FR2']:
+            return 'Okay'
+        return x
+
+    def lot_config(cls, df):
+        df['LotConfig'] = df['LotConfig']\
+                          .apply(lambda x: cls.group_lot(x))
+        return df
+
+    def group_paved(cls, x):
+        if x in ['PaveGrvlN', 'PaveN']:
+            return 'LowPave'
+        if x in ['GrvlY', 'PaveGrvlY', 'PaveP', 'PaveGrvlP']:
+            return 'MedPave'
+        if x in ['PaveY', 'PavePaveY', 'PavePaveN']:
+            return 'HighPave'
+        return x
+
+    def paved(cls, df):
+        df['Street__Alley__PavedDrive'] = df['Street__Alley__PavedDrive']\
+                                          .apply(lambda x: cls.group_paved(x))
+        return df
+
+    def group_mszoning(cls, x):
+        if (x == 'RM') or (x == 'RH'):
+            return 'RMRH'
+        if (x == 'RL') or (x == 'FV'):
+            return 'RLFV'
+        return x
+
+    def mszoning(cls, df):
+        df['MSZoning'] = df['MSZoning'].apply(lambda x: cls.group_mszoning(x))
+        return df
+
+    def group_electrical(cls, x):
+        if (x == 'Mix') or (x == 'FuseP'):
+            return 'Poor'
+        if (x == 'FuseF') or (x == 'FuseA'):
+            return 'Okay'
+        else:
+            return 'Good'
+
+    def electrical_quality(cls, df):
+        df['Electrical'] = df['Electrical'].apply(
+                           lambda x: cls.group_electrical(x))
+        return df
+
+    def is_positive_subclass(cls, df):
+        df['MSSubClass'] = df['MSSubClass'].apply(
+                           lambda x: bool((x == 60) or (x == 120)))
+        return df
+
+    def has_deduction(cls, df):
+        df['Functional'] = (df['Functional'] != 'Typ').astype(bool)
+        # df.drop('Functional', axis=1, inplace=True)
+        return df
+
     def convert_to_string(cls, df, cols):
         for col in cols:
-            df[col] = df[col].astype('str')
+            df[col] = df[col].apply(lambda x: '_' + str(x))
         return df
 
-    def is_regular_shape(cls, df):
-        df['Is_Regular_Shape'] = (df['LotShape'] == 'Reg').astype(bool)
-        df.drop('LotShape', axis=1, inplace=True)
+    def is_regular(cls, x):
+        if x in ['IR1', 'IR2']:
+            return 'SemiReg'
+        return x
+
+    def lot_shape(cls, df):
+        df['LotShape'] = df['LotShape'].apply(lambda x: cls.is_regular(x))
+        # df.drop('LotShape', axis=1, inplace=True)
         return df
 
-    def has_pool(cls, df):
-        df['Has_Pool'] = (df['PoolQC'] == '').astype(bool)
-        df.drop('PoolQC', axis=1, inplace=True)
+    def group_pool(cls, x):
+        if x in ['Ex', 'Gd']:
+            return 'Good'
+        return x
+
+    def pool(cls, df):
+        df['PoolQC'] = df['PoolQC'].apply(lambda x: cls.group_pool(x))
+        # df.drop('PoolQC', axis=1, inplace=True)
         return df
 
     def bath_porch_sf(cls, df):
@@ -276,18 +371,18 @@ class Engineer:
 
 class Model:
 
-    def cross_validate(cls, model, random_state=0):
-        train = cls.get_df('train')
-        X = train.drop(columns=[cls.target_col])
-        y = train[cls.target_col]
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3,
-            random_state=random_state)
-        model = model()
-        model.fit(X_train, y_train)
-        X_predictions = model.predict(X_test)
-        score = math.sqrt(mean_squared_error(y_test, X_predictions))
-        return (model, score)
+    # def cross_validate(cls, model, random_state=0):
+    #     train = cls.get_df('train')
+    #     X = train.drop(columns=[cls.target_col])
+    #     y = train[cls.target_col]
+    #     X_train, X_test, y_train, y_test = train_test_split(
+    #         X, y, test_size=0.3,
+    #         random_state=random_state)
+    #     model = model()
+    #     model.fit(X_train, y_train)
+    #     X_predictions = model.predict(X_test)
+    #     score = math.sqrt(mean_squared_error(y_test, X_predictions))
+    #     return (model, score)
 
     def grid_search(cls, model, parameters):
         train, test = cls.get_dfs()
@@ -298,15 +393,10 @@ class Model:
         model.fit(X, y)
         return model
 
-    def fit(cls, model):
-        train, test = cls.get_dfs()
-        target_data = train[cls.target_col]
-        train.drop(cls.target_col, axis=1, inplace=True)
-        model.fit(train, target_data)
-        X_predictions = model.predict(train)
-        score = math.sqrt(mean_squared_error(target_data, X_predictions))
+    def predict(cls, model):
+        test = cls.get_df('test')
         predictions = model.predict(test)
-        return (predictions, score)
+        return predictions
 
     def save_predictions(cls, predictions):
         now = str(time.time()).split('.')[0]
@@ -439,38 +529,45 @@ def run(d, model, parameters):
     mutate(d.fill_na)
     mutate(d.remove_outliers)
 
+    mutate(d.lot_config)
+    mutate(d.lot_shape)
+    mutate(d.land_slope)
+
+    mutate(d.house_remodel_age)
+
+    mutate(d.convert_to_string, ['MSSubClass', 'YrSold', 'MoSold'])
     # Feature Engineering
     mutate(d.sum_features, d.col_sum)
     mutate(d.bath_porch_sf)
-    mutate(d.house_remodel_age)
-    mutate(d.is_regular_shape)
-    mutate(d.has_pool)
-    mutate(d.convert_to_string, ['MSSubClass', 'YrSold', 'MoSold'])
+    mutate(d.pool)
+    mutate(d.has_deduction)
+    # mutate(d.is_positive_subclass)
+    mutate(d.electrical_quality)
+    # mutate(d.mszoning)
+    # mutate(d.paved)
 
     # Show categorical facetgrid w/ boxplots
-    categorical = d.get_categorical().columns.values
-    train = d.get_df('train')
-    categorical = pd.melt(train, id_vars=['SalePrice'],
-                          value_vars=categorical)
-    facet_grid = sns.FacetGrid(categorical, col="variable",
-                               col_wrap=3, sharex=False, sharey=False, size=5)
-    facet_grid = facet_grid.map(d.show_boxplot, "value", "SalePrice")
-    # plt.show()
-
-    mutate(d.encode_categorical, [], 'target_median')
-    mutate(d.normalize_features, [d.target_col])
+    # categorical = d.get_non_numeric().columns.values
+    # train = d.get_df('train')
+    # d.plot_categorical(train, categorical)
     numeric_cols = d.get_numeric().columns.values
     mutate(d.scale_quant_features, numeric_cols)
+    mutate(d.encode_categorical, [], 'target_median')
+    mutate(d.normalize_features, [d.target_col])
+
     # skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
     # mutate(d.normalize_features, skewed_features)
-    # mutate(d.drop_low_corr)
+    mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
-    print(d.get_df('train').corr()['SalePrice'].sort_values())
+
+    # print(d.get_df('train').corr()['SalePrice'].sort_values())
     model = d.grid_search(model, parameters)
-    predictions, score = d.fit(model)
+    print(round(model.cv_results_['mean_test_score'][0], 7))
+    # print(model.cv_results_['mean_test_nmse'])
+    # print(model.cv_results_['mean_train_nmse'])
+    predictions = d.predict(model)
     d.print_log()
-    print(round(score, 5))
     return predictions
 
 
@@ -478,9 +575,10 @@ model = LinearRegression
 parameters = {}
 # cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
 #                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
-cols_to_ignore = ['Id']
+cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
+                  'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
 col_sum = [
-    # ['LandContour', 'LotShape', 'LotConfig', 'LotFrontage', 'LandSlope'],
+    # ['LotShape', 'LandContour'],
     # ['Condition1', 'Condition2'],
     # ['BldgType', 'HouseStyle'],
     # ['RoofStyle', 'RoofMatl'],
@@ -489,6 +587,8 @@ col_sum = [
     # ['HeatingQC', 'CentralAir'],
     # ['GarageType', 'GarageFinish', 'GarageQual', 'GarageCond'],
     # ['Functional', 'LandContour']
+    # ['YrSold', 'MoSold'],
+    # ['Street', 'Alley', 'PavedDrive']
 ]
 d = Data('./input/train.csv',
          './input/test.csv',
@@ -496,6 +596,7 @@ d = Data('./input/train.csv',
          cols_to_ignore,
          col_sum)
 # print(d.get_df('train').columns)
+# print(d.get_df('train')[['Functional']].groupby('Functional'))
 predictions = run(d, model, parameters)
 d.save_predictions(predictions)
-# 0.10751
+# -0.013121
