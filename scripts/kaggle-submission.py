@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Lasso
 # from sklearn.ensemble import RandomForestRegressor
 # import xgboost as xgb
 # from sklearn.model_selection import train_test_split
@@ -298,57 +298,50 @@ class Engineer:
         # df.drop('PoolQC', axis=1, inplace=True)
         return df
 
-    def bath_porch_sf(cls, df):
-        # Total SF for bathroom
-        df['TotalBath'] = df['BsmtFullBath'] + (0.5 * df['BsmtHalfBath']) + \
-            df['FullBath'] + (0.5 * df['HalfBath'])
-
+    def porch_sf(cls, df):
         # Total SF for porch
         df['AllPorchSF'] = df['OpenPorchSF'] + df['EnclosedPorch'] + \
             df['3SsnPorch'] + df['ScreenPorch']
 
         # Drop original columns
-        df.drop(['BsmtFullBath', 'FullBath', 'HalfBath',
-                'OpenPorchSF', 'EnclosedPorch', 'ScreenPorch'],
+        df.drop(['OpenPorchSF', 'EnclosedPorch', 'ScreenPorch', '3SsnPorch'],
+                inplace=True, axis=1)
+        return df
+    
+    def bath_sf(cls, df):
+        # Total SF for bathroom
+        df['TotalBath'] = df['BsmtFullBath'] + (0.5 * df['BsmtHalfBath']) + \
+            df['FullBath'] + (0.5 * df['HalfBath'])
+
+        # Drop original columns
+        df.drop(['BsmtFullBath', 'FullBath', 'HalfBath', 'BsmtHalfBath'],
                 inplace=True, axis=1)
         return df
 
-    def house_remodel_age(cls, df):
-        # if no remodeling or additions))
-        df['Is_Remodeled'] = (df['YearRemodAdd'] !=
-                              df['YearBuilt']).astype(bool)
-
+    def house_age(cls, df):
         # add feature about the age of the house when sold
         df['Age'] = df['YrSold'] - df['YearBuilt']
-
-        df['Garage_Age'] = df['YrSold'] - df['GarageYrBlt']
-
-        # add flag if house was sold 2 years or less after it was built
-        df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(bool)
-
-        # add flag is remodel was recent (i.e. within 2 years of the sale)
-        df['Is_Recent_Remodel'] = (df['YrSold'] -
-                                   df['YearRemodAdd'] <= 2).astype(bool)
-
-        # drop the original columns
-        df.drop(['YearRemodAdd', 'YearBuilt', 'GarageYrBlt'],
-                axis=1, inplace=True)
         return df
 
     def garage_age(cls, df):
-        # if no remodeling or additions))
-        df['Is_Remodeled'] = (df['YearRemodAdd'] !=
-                              df['YearBuilt']).astype(bool)
+        df['Garage_Age'] = df['YrSold'] - df['GarageYrBlt']
+        return df
 
-        # add feature about the age of the house when sold
-        df['Age'] = df['YrSold'] - df['YearBuilt']
-
+    def is_new_house(cls, df):
         # add flag if house was sold 2 years or less after it was built
         df['Is_New_House'] = (df['YrSold'] - df['YearBuilt'] <= 2).astype(bool)
+        return df
 
+    def is_recent_remodel(cls, df):
         # add flag is remodel was recent (i.e. within 2 years of the sale)
         df['Is_Recent_Remodel'] = (df['YrSold'] -
                                    df['YearRemodAdd'] <= 2).astype(bool)
+        return df
+
+    def is_remodeled(cls, df):
+        # if no remodeling or additions
+        df['Is_Remodeled'] = (df['YearRemodAdd'] !=
+                              df['YearBuilt']).astype(bool)
 
         # drop the original columns
         df.drop(['YearRemodAdd', 'YearBuilt'], axis=1, inplace=True)
@@ -410,7 +403,7 @@ class Model:
 
 class Data(Explore, Clean, Engineer, Model):
 
-    def __init__(self, train_csv, test_csv, target='', ignore=[], col_sum=[]):
+    def __init__(self, train_csv, test_csv, target='', ignore=[], keep=[], col_sum=[]):
         '''Create pandas DataFrame objects for train and test data.
 
         Positional arguments:
@@ -426,6 +419,7 @@ class Data(Explore, Clean, Engineer, Model):
         self.__train.name, self.__test.name = self.get_df_names()
         self.target_col = target
         self.ignore = ignore
+        self.keep = keep
         self.col_sum = col_sum
         self.__original = False
         self.__log = False
@@ -440,7 +434,7 @@ class Data(Explore, Clean, Engineer, Model):
     def get_df_names(cls):
         return ('train', 'test')
 
-    def get_dfs(cls, ignore=False, originals=False):
+    def get_dfs(cls, ignore=False, originals=False, keep=False):
         train, test = (cls.__train.copy(),
                        cls.__test.copy())
         if originals:
@@ -448,11 +442,14 @@ class Data(Explore, Clean, Engineer, Model):
         if ignore:
             train, test = (train.drop(columns=cls.ignore),
                            test.drop(columns=cls.ignore))
+        if keep:
+            train, test = (train[cls.keep], 
+                           test[cls.keep])
         train.name, test.name = cls.get_df_names()
         return (train, test)
 
-    def get_df(cls, name, ignore=False, original=False):
-        train, test = cls.get_dfs(ignore, original)
+    def get_df(cls, name, ignore=False, original=False, keep=False):
+        train, test = cls.get_dfs(ignore, original, keep)
         if name == 'train':
             return train
         if name == 'test':
@@ -533,12 +530,18 @@ def run(d, model, parameters):
     mutate(d.lot_shape)
     mutate(d.land_slope)
 
-    mutate(d.house_remodel_age)
+    # mutate(d.house_age)
+    # mutate(d.garage_age)
+    mutate(d.is_new_house)
+    # mutate(d.is_recent_remodel)
+    # mutate(d.is_remodeled)
 
     mutate(d.convert_to_string, ['MSSubClass', 'YrSold', 'MoSold'])
+
     # Feature Engineering
     mutate(d.sum_features, d.col_sum)
-    mutate(d.bath_porch_sf)
+    mutate(d.bath_sf)
+    mutate(d.porch_sf)
     mutate(d.pool)
     mutate(d.has_deduction)
     # mutate(d.is_positive_subclass)
@@ -547,11 +550,12 @@ def run(d, model, parameters):
     # mutate(d.paved)
 
     # Show categorical facetgrid w/ boxplots
-    # categorical = d.get_non_numeric().columns.values
-    # train = d.get_df('train')
-    # d.plot_categorical(train, categorical)
+    categorical = d.get_non_numeric().columns.values
+    train = d.get_df('train')
+    d.plot_categorical(train, categorical)
     numeric_cols = d.get_numeric().columns.values
     mutate(d.scale_quant_features, numeric_cols)
+    # mutate(d.encode_onehot)
     mutate(d.encode_categorical, [], 'target_median')
     mutate(d.normalize_features, [d.target_col])
 
@@ -570,13 +574,19 @@ def run(d, model, parameters):
     d.print_log()
     return predictions
 
+d = Data('./input/train.csv',
+         './input/test.csv',
+         'SalePrice')
 
-model = LinearRegression
-parameters = {}
+model = Lasso
+parameters = {'alpha': [0.0001, 0.0005, 0.0010]}
+
 # cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
 #                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
 cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
+# cols_to_keep = ['OverallQual', 'GrLivArea', 'GarageCars', 'TotalBsmtSF', 'FullBath', 'YearBuilt']
+
 col_sum = [
     # ['LotShape', 'LandContour'],
     # ['Condition1', 'Condition2'],
@@ -590,13 +600,15 @@ col_sum = [
     # ['YrSold', 'MoSold'],
     # ['Street', 'Alley', 'PavedDrive']
 ]
+
 d = Data('./input/train.csv',
          './input/test.csv',
          'SalePrice',
-         cols_to_ignore,
-         col_sum)
+         ignore = cols_to_ignore,
+        #  keep = cols_to_keep,
+         col_sum = col_sum)
 # print(d.get_df('train').columns)
 # print(d.get_df('train')[['Functional']].groupby('Functional'))
 predictions = run(d, model, parameters)
 d.save_predictions(predictions)
-# -0.013121
+# -0.013041
