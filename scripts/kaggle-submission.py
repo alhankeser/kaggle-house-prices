@@ -203,6 +203,14 @@ class Clean:
         df.drop(to_drop['drop'], axis=1, inplace=True)
         return df
 
+    def encode_quality(cls, df):
+        quality_cols = [col for col in df if 'TA' in list(df[col])]
+        quality_dict = {'None': 0, 'Po': 1, 'Fa': 2, 'TA': 3, 'Gd': 4, 'Ex': 5}
+        
+        for col in quality_cols:
+            df[col] = df[col].map(quality_dict)
+        return df
+
 
 class Engineer:
 
@@ -555,6 +563,7 @@ def run(d, model, parameters):
     d.plot_categorical(train, categorical)
     numeric_cols = d.get_numeric().columns.values
     mutate(d.scale_quant_features, numeric_cols)
+    # mutate(d.encode_quality)
     # mutate(d.encode_onehot)
     mutate(d.encode_categorical, [], 'target_median')
     mutate(d.normalize_features, [d.target_col])
@@ -578,8 +587,8 @@ d = Data('./input/train.csv',
          './input/test.csv',
          'SalePrice')
 
-model = Lasso
-parameters = {'alpha': [0.0001, 0.0005, 0.0010]}
+model = LinearRegression
+parameters = {}
 
 # cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
 #                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
