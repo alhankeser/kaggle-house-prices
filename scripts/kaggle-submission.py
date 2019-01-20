@@ -8,11 +8,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.linear_model import LinearRegression, Lasso
+from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import Lasso
 # from sklearn.ensemble import RandomForestRegressor
 # import xgboost as xgb
-# from sklearn.model_selection import train_test_split
-# from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
 # from sklearn.metrics import explained_variance_score
@@ -42,7 +43,7 @@ class Explore:
         return cls.get_dtype(exclude_type=['float64', 'int', 'float32'])
 
     def get_numeric(cls):
-        return cls.get_dtype(exclude_type=['object'])
+        return cls.get_dtype(exclude_type=['object', 'category'])
 
     def get_categorical(cls, as_df=False):
         return cls.get_dtype(include_type=['object'])
@@ -52,7 +53,7 @@ class Explore:
         corr_mat = df.corr(method=method)
         corr_mat.sort_values(cls.target_col, inplace=True)
         corr_mat.drop(cls.target_col, inplace=True)
-        return corr_mat[[cls.target_col]]
+        return corr_mat
 
     def get_skewed_features(cls, df, features, skew_threshold=0.4):
         feat_skew = pd.DataFrame(
@@ -195,9 +196,25 @@ class Clean:
                 pass
         return df
 
+    def drop_multicollinear(cls, df, threshold=.7525):
+        to_drop = []
+        corr_mat = cls.get_correlations()
+        corr_mat.drop(cls.target_col, axis=1, inplace=True)
+        for feature in corr_mat:
+            if feature not in to_drop:
+                correlated_features = corr_mat[
+                            (abs(corr_mat[feature]) >= threshold) &
+                            (corr_mat[feature] != 1)
+                            ].index
+                if (len(correlated_features) > 0):
+                    to_drop.append(correlated_features[0])
+        df.drop(to_drop, axis=1, inplace=True)
+        return df
+
     def drop_low_corr(cls, df, threshold=0.12):
         to_drop = pd.DataFrame(columns=['drop'])
         corr_mat = cls.get_correlations()
+        corr_mat = corr_mat[[cls.target_col]]
         target = cls.target_col
         to_drop['drop'] = corr_mat[(abs(corr_mat[target]) <= threshold)].index
         df.drop(to_drop['drop'], axis=1, inplace=True)
@@ -205,6 +222,20 @@ class Clean:
 
 
 class Engineer:
+
+    def year_built(cls, df):
+        bins = np.arange(1850, 2020, 10).tolist()
+        # bins = [1850, 1950, 1990, 2005, 2008, 2010, 2020]
+        s = pd.cut(df['YearBuilt'], bins)
+        df['YearBuilt'] = [a.left for a in s]
+        return df
+
+    def year_remodadd(cls, df):
+        # bins = np.arange(1850, 2020, 10).tolist()
+        bins = [1850, 1990, 2020]
+        s = pd.cut(df['YearRemodAdd'], bins)
+        df['YearRemodAdd'] = [a.left for a in s]
+        return df
 
     def group_slope(cls, x):
         if x in ['Sev', 'Mod']:
@@ -275,7 +306,7 @@ class Engineer:
 
     def convert_to_string(cls, df, cols):
         for col in cols:
-            df[col] = df[col].apply(lambda x: '_' + str(x))
+            df[col] = df[col].astype(str)
         return df
 
     def is_regular(cls, x):
@@ -307,7 +338,7 @@ class Engineer:
         df.drop(['OpenPorchSF', 'EnclosedPorch', 'ScreenPorch', '3SsnPorch'],
                 inplace=True, axis=1)
         return df
-    
+
     def bath_sf(cls, df):
         # Total SF for bathroom
         df['TotalBath'] = df['BsmtFullBath'] + (0.5 * df['BsmtHalfBath']) + \
@@ -364,18 +395,24 @@ class Engineer:
 
 class Model:
 
-    # def cross_validate(cls, model, random_state=0):
-    #     train = cls.get_df('train')
-    #     X = train.drop(columns=[cls.target_col])
-    #     y = train[cls.target_col]
-    #     X_train, X_test, y_train, y_test = train_test_split(
-    #         X, y, test_size=0.3,
-    #         random_state=random_state)
-    #     model = model()
-    #     model.fit(X_train, y_train)
-    #     X_predictions = model.predict(X_test)
-    #     score = math.sqrt(mean_squared_error(y_test, X_predictions))
-    #     return (model, score)
+    def cross_validate(cls, model, parameters, x_val_times=10):
+        scores = np.array([])
+        # TODO: check if there are lists in parameters to run gridsearch
+        while x_val_times > 0:
+            train = cls.get_df('train')
+            X = train.drop(columns=[cls.target_col])
+            y = train[cls.target_col]
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.3,
+                random_state=(x_val_times ** 2))
+            cv_model = model(**parameters)
+            cv_model.fit(X_train, y_train)
+            X_predictions = cv_model.predict(X_test)
+            score = math.sqrt(mean_squared_error(y_test, X_predictions))
+            scores = np.append(scores, score)
+            x_val_times -= 1
+        score = np.round(scores.mean(), decimals=5)
+        return score
 
     def grid_search(cls, model, parameters):
         train, test = cls.get_dfs()
@@ -383,6 +420,15 @@ class Model:
         y = train[cls.target_col]
         model = GridSearchCV(model(), parameters, cv=10,
                              scoring='neg_mean_squared_error')
+        # model = model(**parameters)
+        model.fit(X, y)
+        return model
+
+    def fit(cls, model, parameters):
+        train = cls.get_df('train')
+        X = train.drop(columns=[cls.target_col])
+        y = train[cls.target_col]
+        model = model(**parameters)
         model.fit(X, y)
         return model
 
@@ -391,19 +437,22 @@ class Model:
         predictions = model.predict(test)
         return predictions
 
-    def save_predictions(cls, predictions):
+    def save_predictions(cls, predictions, score=0):
         now = str(time.time()).split('.')[0]
         df = cls.get_df('test', False, True)
         target = cls.target_col
         df[target] = predictions
         df[target] = df[target].apply(lambda x: np.expm1(x))
-        df[[df.columns[0], target]].to_csv('submit-' + now + '.csv',
+        df[[df.columns[0], target]].to_csv('submit__' +
+                                           str(int(score * 100000))
+                                           + '__' + now + '.csv',
                                            index=False)
 
 
 class Data(Explore, Clean, Engineer, Model):
 
-    def __init__(self, train_csv, test_csv, target='', ignore=[], keep=[], col_sum=[]):
+    def __init__(self, train_csv, test_csv, target='', ignore=[], keep=[],
+                 col_sum=[]):
         '''Create pandas DataFrame objects for train and test data.
 
         Positional arguments:
@@ -443,7 +492,7 @@ class Data(Explore, Clean, Engineer, Model):
             train, test = (train.drop(columns=cls.ignore),
                            test.drop(columns=cls.ignore))
         if keep:
-            train, test = (train[cls.keep], 
+            train, test = (train[cls.keep],
                            test[cls.keep])
         train.name, test.name = cls.get_df_names()
         return (train, test)
@@ -526,33 +575,39 @@ def run(d, model, parameters):
     mutate(d.fill_na)
     mutate(d.remove_outliers)
 
+    # mutate(d.year_built)
+    # mutate(d.year_remodadd)
+
     mutate(d.lot_config)
-    mutate(d.lot_shape)
+    # mutate(d.lot_shape) # no difference
     mutate(d.land_slope)
 
-    # mutate(d.house_age)
-    # mutate(d.garage_age)
-    mutate(d.is_new_house)
-    # mutate(d.is_recent_remodel)
-    # mutate(d.is_remodeled)
+    # mutate(d.house_age) # negative
+    # mutate(d.garage_age) # negative
+    # mutate(d.is_new_house)  # negative
+    # mutate(d.is_recent_remodel)  # negative
+    # mutate(d.is_remodeled)  # negative
 
-    mutate(d.convert_to_string, ['MSSubClass', 'YrSold', 'MoSold'])
+    mutate(d.convert_to_string, ['MSSubClass', 'YrSold', 'MoSold',
+                                 'YearBuilt',
+                                 'YearRemodAdd',
+                                 'GarageYrBlt'])
 
     # Feature Engineering
     mutate(d.sum_features, d.col_sum)
-    mutate(d.bath_sf)
-    mutate(d.porch_sf)
-    mutate(d.pool)
-    mutate(d.has_deduction)
-    # mutate(d.is_positive_subclass)
-    mutate(d.electrical_quality)
-    # mutate(d.mszoning)
-    # mutate(d.paved)
+    # mutate(d.bath_sf) # negative
+    mutate(d.porch_sf)  # positive
+    # mutate(d.pool) # no difference
+    # mutate(d.has_deduction) # negative
+    # mutate(d.is_positive_subclass) # negative
+    # mutate(d.electrical_quality) # no difference
+    # mutate(d.mszoning) # negative
+    mutate(d.paved)  # positive
 
     # Show categorical facetgrid w/ boxplots
-    categorical = d.get_non_numeric().columns.values
-    train = d.get_df('train')
-    d.plot_categorical(train, categorical)
+    # categorical = d.get_non_numeric().columns.values
+    # train = d.get_df('train')
+    # d.plot_categorical(train, categorical)
     numeric_cols = d.get_numeric().columns.values
     mutate(d.scale_quant_features, numeric_cols)
     # mutate(d.encode_onehot)
@@ -561,31 +616,63 @@ def run(d, model, parameters):
 
     # skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
     # mutate(d.normalize_features, skewed_features)
+    mutate(d.drop_multicollinear, 0.75)
     mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
 
     # print(d.get_df('train').corr()['SalePrice'].sort_values())
-    model = d.grid_search(model, parameters)
-    print(round(model.cv_results_['mean_test_score'][0], 7))
+    # model = d.grid_search(model, parameters)
+    score = d.cross_validate(model, parameters)
+    print(score)
+    model = d.fit(model, parameters)
+    # print(round(model.cv_results_['mean_test_score'][0], 7))
     # print(model.cv_results_['mean_test_nmse'])
     # print(model.cv_results_['mean_train_nmse'])
     predictions = d.predict(model)
     d.print_log()
-    return predictions
+    return (predictions, score)
 
-d = Data('./input/train.csv',
-         './input/test.csv',
-         'SalePrice')
 
-model = Lasso
-parameters = {'alpha': [0.0001, 0.0005, 0.0010]}
+# model = Lasso
+# parameters = {'alpha': 0.0001}
+# model = RandomForestRegressor
+# parameters = {
+#   'max_features': 'sqrt',
+#   'min_samples_leaf': 25,
+#   'n_estimators': 100,
+#   'n_jobs': -1,
+#   'oob_score': True,
+#   'random_state': 50
+# }
 
-# cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
-#                   'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
-cols_to_ignore = ['Id', 'BedroomAbvGr', 'GarageArea',
-                  'FireplaceQu_E', 'Alley_E', 'MasVnrArea', 'Condition2_E']
-# cols_to_keep = ['OverallQual', 'GrLivArea', 'GarageCars', 'TotalBsmtSF', 'FullBath', 'YearBuilt']
+# model = xgb.XGBRegressor
+# parameters = {
+#     'max_depth': 3,
+#     'n_estimators': 400
+#     }
+model = LinearRegression
+parameters = {}
+cols_to_ignore = ['Id',
+                  'GarageArea',
+                  'MasVnrArea',
+                  'KitchenAbvGr',
+                  'LotShape_E',
+                  'BldgType_E',
+                  'RoofStyle_E',
+                  'Exterior1st_E',
+                  'ExterQual_E',
+                  'BsmtCond_E',
+                  'BsmtFinType1_E',
+                  'BsmtFinType2_E',
+                  'Heating_E',
+                  'HeatingQC_E',
+                  'Electrical_E',
+                  'GarageFinish_E',
+                  'GarageQual_E',
+                  'Fence_E',
+                  'SaleType_E',
+                  ]
 
 col_sum = [
     # ['LotShape', 'LandContour'],
@@ -595,20 +682,18 @@ col_sum = [
     # ['Exterior1st', 'Exterior2nd', 'ExterQual', 'ExterCond'],
     # ['BsmtQual', 'BsmtCond'],
     # ['HeatingQC', 'CentralAir'],
-    # ['GarageType', 'GarageFinish', 'GarageQual', 'GarageCond'],
-    # ['Functional', 'LandContour']
-    # ['YrSold', 'MoSold'],
-    # ['Street', 'Alley', 'PavedDrive']
+    # ['GarageType', 'GarageFinish', 'GarageQual', 'GarageCond']
+    # ['Functional', 'LandContour'],
+    ['YrSold', 'MoSold'],
+    ['Street', 'Alley', 'PavedDrive']  # positive, combined w/ .paved
 ]
 
 d = Data('./input/train.csv',
          './input/test.csv',
          'SalePrice',
-         ignore = cols_to_ignore,
-        #  keep = cols_to_keep,
-         col_sum = col_sum)
-# print(d.get_df('train').columns)
-# print(d.get_df('train')[['Functional']].groupby('Functional'))
-predictions = run(d, model, parameters)
-d.save_predictions(predictions)
-# -0.013041
+         ignore=cols_to_ignore,
+         col_sum=col_sum)
+predictions, score = run(d, model, parameters)
+d.save_predictions(predictions, score)
+print(d.get_df('train').columns.values)
+# Score to beat 0.11192
