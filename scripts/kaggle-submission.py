@@ -223,7 +223,7 @@ class Clean:
     def encode_quality(cls, df):
         quality_cols = [col for col in df if 'TA' in list(df[col])]
         quality_dict = {'None': 0, 'Po': 1, 'Fa': 2, 'TA': 3, 'Gd': 4, 'Ex': 5}
-        
+
         for col in quality_cols:
             df[col] = df[col].map(quality_dict)
         return df
@@ -625,7 +625,7 @@ def run(d, model, parameters):
 
     # skewed_features = d.get_skewed_features(d.get_df('train'), numeric_cols)
     # mutate(d.normalize_features, skewed_features)
-    mutate(d.drop_multicollinear, 0.75)
+    mutate(d.drop_multicollinear, 0.8)
     mutate(d.drop_low_corr)
     mutate(d.drop_ignore)
     mutate(d.fill_na)
@@ -662,26 +662,7 @@ def run(d, model, parameters):
 #     }
 model = LinearRegression
 parameters = {}
-cols_to_ignore = ['Id',
-                  'GarageArea',
-                  'MasVnrArea',
-                  'KitchenAbvGr',
-                  'LotShape_E',
-                  'BldgType_E',
-                  'RoofStyle_E',
-                  'Exterior1st_E',
-                  'ExterQual_E',
-                  'BsmtCond_E',
-                  'BsmtFinType1_E',
-                  'BsmtFinType2_E',
-                  'Heating_E',
-                  'HeatingQC_E',
-                  'Electrical_E',
-                  'GarageFinish_E',
-                  'GarageQual_E',
-                  'Fence_E',
-                  'SaleType_E',
-                  ]
+cols_to_ignore = ['Id']
 
 col_sum = [
     # ['LotShape', 'LandContour'],
@@ -693,7 +674,7 @@ col_sum = [
     # ['HeatingQC', 'CentralAir'],
     # ['GarageType', 'GarageFinish', 'GarageQual', 'GarageCond']
     # ['Functional', 'LandContour'],
-    ['YrSold', 'MoSold'],
+    # ['YrSold', 'MoSold'],
     ['Street', 'Alley', 'PavedDrive']  # positive, combined w/ .paved
 ]
 
